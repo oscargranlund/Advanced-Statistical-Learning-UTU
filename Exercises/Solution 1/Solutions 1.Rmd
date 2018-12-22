@@ -1,0 +1,337 @@
+---
+title: "Tilastollinen Oppimisen Jatkokurssi Round 1"
+output: html_notebook
+---
+
+## Exercise 1
+*In this exercise, we will predict the number of applications received using the other variables in the College data set.*
+
+First we load the data
+```{r}
+library(ISLR)
+College
+sum(is.na(College))
+```
+
+### (a)
+*Split the data set into a training set and a test set.*
+
+Following the same approach as in the lectures we generate the indicies for the training set and test set by sampling from the sequence 1:777. To get an approximate ratio of 80:20 training set to test set the size of the test set was set to 155. For reproducibility the seed was set to 777.
+```{r}
+N = 777
+K = 155 
+set.seed(777)
+test = sample(seq(N), K, replace=FALSE)
+test
+train=seq(N)[-test]
+train
+length(test) + length(train)
+```
+
+### (b)
+*Fit a linear model using least squares on the training set, and report the test error obtained.*
+
+```{r}
+fit.lm = lm(Apps ~ ., data = College[train, ])
+summary(fit.lm$residuals^2)
+pred.lm = predict(fit.lm, College[test, ])
+sqrres.lm = (pred.lm - College[test, 'Apps'])^2
+summary(sqrres.lm)
+```
+Test-MSE: 1932994  
+Train-MSE: 940942
+
+### (c)
+*Fit a ridge regression model on the training set, with λ chosen by cross-validation. Report the test error obtained.*
+
+First we need to prepare the data since we will be using the glmnet package.
+```{r}
+library(glmnet)
+set.seed(777)
+grid = 10^seq(5,-5, length=50)
+x = model.matrix(Apps~., College)[ ,-1]
+y = College$Apps
+```
+
+First we select a model (λ) by computing estimates for 50 different λ:s on the training set and then we select the λ with the lowest MSE on the training set. Finally we compute the MSE for that λ on the test set.
+```{r}
+fit.ridge = glmnet(x[train, ], y[train], alpha = 0, lambda = grid)
+pred.ridge = predict(fit.ridge, newx = x[test, ])
+sqrres.ridge = (pred.ridge - y[test])^2
+plot(grid, colMeans(sqrres.ridge))
+lambda.ridge = grid[which.min(colMeans(sqrres.ridge))]
+lambda.ridge
+mean(sqrres.ridge[, which.min(colMeans(sqrres.ridge))])
+sqrres.ridgetrain = (predict(fit.ridge, s = lambda.ridge, newx = x[train, ]) - y[train])^2
+mean(sqrres.ridgetrain)
+```
+Test-MSE: 1933104  
+Train-MSE: 940942
+
+The λ chosen was also the smallest one, indicating that perhaps the unregularized model is better. The previous exercise confirms this.
+
+If we instead wanted to do k-fold cross-validation we would use the following approach:
+```{r}
+set.seed(777)
+fit.cvridge = cv.glmnet(x[train, ], y[train], alpha = 0, lambda = grid)
+plot(fit.cvridge)
+lambda.cvridge = fit.cvridge$lambda.min
+lambda.cvridge
+trainerrors.cv = (predict(fit.cvridge, newx = x[train, ], s = lambda.cvridge)-y[train])^2
+mean(trainerrors.cv)
+pred.cvridge = predict(fit.cvridge, newx = x[test, ], s = lambda.cvridge)
+sqrres.cvridge = (pred.cvridge - y[test])^2
+mean(sqrres.cvridge)
+```
+Test-MSE: 2149076  
+Train-MSE: 944583.8
+
+Here the λ is a bit larger but test set performance is a bit worse.
+
+### (d)
+*Fit a lasso model on the training set, with λ chosen by cross-validation. Report the test error obtained, along with the number of non-zero coefficient estimates.*
+
+First we select a model (λ) by computing estimates for 50 different λ:s on the training set and then we select the λ with the lowest MSE on the training set. Finally we compute the MSE for that λ on the test set.
+```{r}
+fit.lasso = glmnet(x[train, ], y[train], alpha = 1, lambda = grid)
+pred.lasso = predict(fit.lasso, newx = x[test, ])
+sqrres.lasso = (pred.lasso - y[test])^2
+plot(grid, colMeans(sqrres.lasso))
+lambda.lasso = grid[which.min(colMeans(sqrres.lasso))]
+lambda.lasso
+mean(sqrres.lasso[, which.min(colMeans(sqrres.lasso))])
+sqrres.lassotrain = (predict(fit.lasso, s = lambda.lasso, newx = x[train, ]) - y[train])^2
+mean(sqrres.lassotrain)
+```
+Test-MSE: 1934333 
+Train-MSE: 940942.7
+
+The λ chosen was also the smallest one, indicating that perhaps the unregularized model is better.
+
+If we instead wanted to do k-fold cross-validation we would use the following approach:
+```{r}
+set.seed(777)
+fit.cvlasso = cv.glmnet(x[train, ], y[train], alpha = 1, lambda = grid)
+plot(fit.cvlasso)
+lambda.cvlasso = fit.cvlasso$lambda.min
+lambda.cvlasso
+trainerrors.cv = (predict(fit.cvlasso, newx = x[train, ], s = lambda.cvlasso)-y[train])^2
+mean(trainerrors.cv)
+pred.cvlasso = predict(fit.cvlasso, newx = x[test, ], s = lambda.cvlasso)
+sqrres.cvlasso = (pred.cvlasso - y[test])^2
+mean(sqrres.cvlasso)
+```
+Test-MSE = 2088789  
+Train-MSE = 952410.1
+
+Again, the λ chosen is a bit larger with a bit worse test set performance.
+
+```{r}
+predict(fit.cvlasso, s = lambda.cvlasso, type = "coefficients")
+```
+
+The Enroll and Personal variables were left out of the model.
+
+### (g)
+*Comment on the results obtained. How accurately can we predict the number of college applications received? Is there much difference among the test errors resulting from these five approaches?*
+
+None of the tested models seem to perform much better MSE-wise on the test set.
+
+We can compute the $R^2$-values:
+```{r}
+TSS = sum((y[test]-mean(y[test]))^2)
+lm.test.r2 = 1 - sum(sqrres.lm)/TSS
+ridge.test.r2 = 1 - sum(sqrres.ridge[, which.min(colMeans(sqrres.ridge))])/TSS
+cvridge.test.r2 = 1 - sum(sqrres.cvridge)/TSS
+lasso.test.r2 = 1 - sum(sqrres.lasso[, which.min(colMeans(sqrres.lasso))])/TSS
+cvlasso.test.r2 = 1 - sum(sqrres.cvlasso)/TSS
+lm.test.r2
+ridge.test.r2
+cvridge.test.r2
+lasso.test.r2
+cvlasso.test.r2
+```
+But we should probably be using something like adjusted-$R^2$ to compare the models.
+
+In general the results were good and we can predict the number of applicants pretty accurately with any of the tried models.
+
+## Exercise 2
+*We will now try to predict per capita crime rate in the Boston data set.*
+
+We first load the dataset and explore it a bit.
+```{r}
+library(glmnet)
+library(ISLR)
+library(MASS)
+Boston
+sum(is.na(Boston))
+plot(Boston[, 1:5])
+plot(Boston[, 5:9])
+plot(Boston[, 9:14])
+```
+
+
+### (a)
+*Try out some of the regression methods explored in this chapter, such as best subset selection, the lasso, ridge regression, and PCR. Present and discuss results for the approaches that you consider.*
+
+First we split into training and testing sets:
+```{r}
+N = 506
+K = 101
+set.seed(777)
+test = sample(seq(N), K, replace=FALSE)
+test
+train=seq(N)[-test]
+train
+length(test) + length(train)
+x = model.matrix(crim~., Boston)[ ,-1]
+y = Boston$crim
+TSS = sum((y[test] - mean(y[test]))^2)
+grid = 10^seq(5,-5, length=50)
+```
+
+Simple linear model:
+```{r}
+fit.lm = lm(crim ~ ., data = Boston[train, ])
+summary(fit.lm$residuals^2)
+pred.lm = predict(fit.lm, Boston[test, ])
+sqrres.lm = (pred.lm - Boston[test, 'crim'])^2
+summary(sqrres.lm)
+lm.test.r2 = 1 - sum(sqrres.lm)/TSS
+lm.test.r2
+```
+
+Ridge regression using validation set cross-validation:
+```{r}
+fit.ridge = glmnet(x[train, ], y[train], alpha = 0, lambda = grid)
+pred.ridge = predict(fit.ridge, newx = x[test, ])
+sqrres.ridge = (pred.ridge - y[test])^2
+plot(log(grid), colMeans(sqrres.ridge))
+lambda.ridge = grid[which.min(colMeans(sqrres.ridge))]
+lambda.ridge
+mean(sqrres.ridge[, which.min(colMeans(sqrres.ridge))])
+sqrres.ridgetrain = (predict(fit.ridge, s = lambda.ridge, newx = x[train, ]) - y[train])^2
+mean(sqrres.ridgetrain)
+ridge.test.r2 = 1 - sum(sqrres.ridge[, which.min(colMeans(sqrres.ridge))])/TSS
+ridge.test.r2
+```
+
+Using 10-fold crossvalidation:
+```{r}
+set.seed(777)
+fit.cvridge = cv.glmnet(x[train, ], y[train], alpha = 0, lambda = grid)
+plot(fit.cvridge)
+lambda.cvridge = fit.cvridge$lambda.min
+lambda.cvridge
+trainerrors.cv = (predict(fit.cvridge, newx = x[train, ], s = lambda.cvridge)-y[train])^2
+mean(trainerrors.cv)
+pred.cvridge = predict(fit.cvridge, newx = x[test, ], s = lambda.cvridge)
+sqrres.cvridge = (pred.cvridge - y[test])^2
+mean(sqrres.cvridge)
+cvridge.test.r2 = 1 - sum(sqrres.cvridge)/TSS
+cvridge.test.r2
+```
+
+Lasso regression:
+```{r}
+fit.lasso = glmnet(x[train, ], y[train], alpha = 1, lambda = grid)
+pred.lasso = predict(fit.lasso, newx = x[test, ])
+sqrres.lasso = (pred.lasso - y[test])^2
+plot(log(grid), colMeans(sqrres.lasso))
+lambda.lasso = grid[which.min(colMeans(sqrres.lasso))]
+lambda.lasso
+mean(sqrres.lasso[, which.min(colMeans(sqrres.lasso))])
+sqrres.lassotrain = (predict(fit.lasso, s = lambda.lasso, newx = x[train, ]) - y[train])^2
+mean(sqrres.lassotrain)
+lasso.test.r2 = 1 - sum(sqrres.lasso[, which.min(colMeans(sqrres.lasso))])/TSS
+lasso.test.r2
+```
+
+Using 10-fold cross-validation:
+```{r}
+set.seed(777)
+fit.cvlasso = cv.glmnet(x[train, ], y[train], alpha = 1, lambda = grid)
+plot(fit.cvlasso)
+lambda.cvlasso = fit.cvlasso$lambda.min
+lambda.cvlasso
+trainerrors.cv = (predict(fit.cvlasso, newx = x[train, ], s = lambda.cvlasso)-y[train])^2
+mean(trainerrors.cv)
+pred.cvlasso = predict(fit.cvlasso, newx = x[test, ], s = lambda.cvlasso)
+sqrres.cvlasso = (pred.cvlasso - y[test])^2
+mean(sqrres.cvlasso)
+cvlasso.test.r2 = 1 - sum(sqrres.cvlasso)/TSS
+cvlasso.test.r2
+```
+
+Selecting larger $\lambda$ (fit.cvlasso$lambda.lse only returns NULL?):
+```{r}
+set.seed(777)
+#lambda.cvlassolse = fit.cvlasso$lambda.lse
+#lambda.cvlassolse
+lambda.cvlassolse = fit.cvlasso$lambda[24]
+lambda.cvlassolse
+trainerrors.cv = (predict(fit.cvlasso, newx = x[train, ], s = lambda.cvlassolse)-y[train])^2
+mean(trainerrors.cv)
+pred.cvlassolse = predict(fit.cvlasso, newx = x[test, ], s = lambda.cvlassolse)
+sqrres.cvlassolse = (pred.cvlassolse - y[test])^2
+mean(sqrres.cvlassolse)
+cvlassolse.test.r2 = 1 - sum(sqrres.cvlassolse)/TSS
+cvlassolse.test.r2
+predict(fit.cvlasso, s = lambda.cvlassolse, type = "coefficients")
+```
+
+Best subset selection by 10-fold cross-validation:
+```{r}
+library(leaps)
+predict.regsubsets = function(object, newdata, id, ...){
+  form = as.formula(object$call[[2]])
+  mat = model.matrix(form, newdata)
+  coefi = coef(object, id = id)
+  mat[, names(coefi)]%*%coefi
+}
+set.seed(777)
+folds = sample(1:10, size=nrow(Boston[train, ]), replace=TRUE)
+table(folds)
+cv.errors = matrix(NA, 10, 13)
+for (k in 1:10) {
+  best.fit = regsubsets(crim~., data = Boston[folds != k, ], nvmax=13, method='forward')
+  for (i in 1:13) {
+    pred = predict(best.fit, Boston[folds == k, ], id = i)
+    cv.errors[k, i] = mean((Boston$crim[folds == k] - pred)^2)
+  }
+}
+mse.cv = apply(cv.errors, 2, mean)
+plot(mse.cv) # Suggests a model with 9 variables.
+model = regsubsets(crim~., data = Boston[train, ], nvmax=9, method='forward')
+summ = summary(model)
+summ$rsq
+summ$outmat
+finalfit = lm(crim ~ zn + indus + nox + dis + rad + tax + black + lstat + medv, data = Boston[train, ])
+summary(finalfit$residuals^2)
+pred.finalfit = predict(finalfit, Boston[test, ])
+sqrres.finalfit = (pred.finalfit - Boston[test, 'crim'])^2
+summary(sqrres.finalfit)
+finalfit.test.r2 = 1 - sum(sqrres.finalfit)/TSS
+finalfit.test.r2
+```
+
+### (b)
+*Propose a model (or set of models) that seem to perform well on this data set, and justify your answer. Make sure that you are evaluating model performance using validation set error, crossvalidation, or some other reasonable alternative, as opposed to using training error.*
+
+I would choose the model suggested by the best-subset search, that is, a linear model with 9 components specified below:
+```{r}
+finalfit = lm(crim ~ zn + indus + nox + dis + rad + tax + black + lstat + medv, data = Boston[train, ])
+summary(finalfit$residuals^2)
+pred.finalfit = predict(finalfit, Boston[test, ])
+sqrres.finalfit = (pred.finalfit - Boston[test, 'crim'])^2
+summary(sqrres.finalfit)
+finalfit.test.r2 = 1 - sum(sqrres.finalfit)/TSS
+finalfit.test.r2
+```
+
+It performed well with 10-fold cross-validation and also well on the test set but is still a simpler model than the ones suggested by ridge/lasso methods.
+
+### (c)
+*Does your chosen model involve all of the features in the data set? Why or why not?*
+
+No, the ones with more features performed worse in 10-fold cross-validation and isntead this one was picked.
