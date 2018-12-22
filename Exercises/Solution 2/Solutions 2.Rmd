@@ -1,0 +1,68 @@
+---
+title: "Tilastollinen Oppimisen Jatkokurssi Round 2"
+output: html_notebook
+---
+
+##Exercise 1
+
+*Varian: Replicate classification and regression trees and pruning in connection to Titanic example. (Notice that in 1. and 2. exercises, seemingly the obtained results are not necessarily exactly the same as reported in Varian (2014). Report and interpret your findings.)*
+
+First we import the dataset, drop unusable columns, remove NAs and create testing and training sets with a 20:80 testing:training split. For modelling pruposes we also need to convert survived to a factor.
+```{r}
+set.seed(1309)
+titanic3 = read.csv("titanic3.csv")
+columns_to_keep = c(1, 2, 4, 5, 6, 7, 9, 11)
+titanic3 = titanic3[ , columns_to_keep]
+titanic3 = na.omit(titanic3)
+titanic3$survived = as.factor(titanic3$survived)
+train_index = sample(seq(1045), 836)
+train = titanic3[train_index, ]
+test = titanic3[-train_index, ]
+```
+Now we start modelling using classification trees from the rpart-library. The first model will be a large model with at least 10 elements in each leaf. For the splitting criterion the Gini index was used chosen instead of cross-entropy, they should give similar results since they are numerically similar but the Gini index has an interpretation as the variance (ESL).
+```{r}
+library(rpart)
+library(rpart.plot)
+set.seed(1309)
+titanic.model.0 = rpart(survived ~ ., train, method = "class", parms = list(split = "gini"), control = rpart.control(minsplit = 30, minbucket = 10, cp = 0.001, maxdepth = 5, xval = 10))
+rpart.plot(titanic.model.0, type = 5, extra = 2, under = TRUE)
+```
+Now we need to prune the large model using complexity pruning. Fortunately, rpart already performs k-fold crossvalidation on the $\alpha$ (Cp) parameter. We can view the results from the crossvalidation using and then select the best one. Based on the table 0.0072046 or 0.0019212 seem equally good while based on the plot 0.013 or 0.0037 seem equally good, there seems to be a discrepancy between the values reported by the printcp and plotcp commands. The nsplit and size of the tree can however be used to see that 0.0072046 corresponds to 0.013 and 0.0019212 corresponds to 0.0037. The best choice will generally be the largest choice if many $\alpha$s have similar errors. For now lets choose 0.0072047 which will give us the tree of size 6.
+```{r}
+printcp(titanic.model.0)
+plotcp(titanic.model.0)
+titanic.model.pruned = prune(titanic.model.0, cp = 0.0072047)
+rpart.plot(titanic.model.pruned, type = 5, extra = 2, under = TRUE)
+```
+Next we confirm that our modelling method is indeed performing as expected by lookint at the accuracies of all the different models.
+```{r}
+pred.titanic.pruned.test = predict(titanic.model.pruned, newdata = test, type = "class")
+pred.titanic.pruned.train = predict(titanic.model.pruned, type = "class")
+pred.titanic.0.test = predict(titanic.model.0, newdata = test, type = "class")
+pred.titanic.0.train = predict(titanic.model.0, type = "class")
+confusion.titanic.pruned.test = table(pred.titanic.pruned.test, test$survived)
+confusion.titanic.pruned.train = table(pred.titanic.pruned.train, train$survived)
+confusion.titanic.0.test = table(pred.titanic.0.test, test$survived)
+confusion.titanic.0.train = table(pred.titanic.0.train, train$survived)
+accuracy.titanic.0.train = (confusion.titanic.0.train[1, 1] + confusion.titanic.0.train[2, 2])/sum(confusion.titanic.0.train)
+accuracy.titanic.0.test = (confusion.titanic.0.test[1, 1] + confusion.titanic.0.test[2, 2])/sum(confusion.titanic.0.test)
+accuracy.titanic.pruned.train = (confusion.titanic.pruned.train[1, 1] + confusion.titanic.pruned.train[2, 2])/sum(confusion.titanic.pruned.train)
+accuracy.titanic.pruned.test = (confusion.titanic.pruned.test[1, 1] + confusion.titanic.pruned.test[2, 2])/sum(confusion.titanic.pruned.test)
+prop.table(confusion.titanic.0.train); accuracy.titanic.0.train
+prop.table(confusion.titanic.0.test); accuracy.titanic.0.test
+prop.table(confusion.titanic.pruned.train); accuracy.titanic.pruned.train
+prop.table(confusion.titanic.pruned.test); accuracy.titanic.pruned.test
+```
+It seems like everything has worked quite well, overfitting was reduced since the full model training accuracy is higher than the pruned models training accuracy and this helped generalization since the pruned models testing accuracy was higher than the full models testing accuracy.
+
+Using the pruned model as the final model, that is using the model below:
+```{r}
+rpart.plot(titanic.model.pruned, type = 4, extra = 2, under = TRUE)
+```
+We see that the best predictor for survival is the sex of the person, where males older than 9.5 die in 399 out of 491 cases. For males younger than 9.5 surviving is largely decided by how many siblings you have on the boat, if you are fewer than 3 siblings you have a big chance of surviving.
+
+Females seem to have an almost as high chance of surviving as males have of dying, for them the next important predictor is whether they are of a sufficiently high class or not. For females in the 3rd class cabins the chance of survival seems rouglhy 50:50 with a high chance of survival if they embarked in Cherbourg (realtively few people so maybe a tight knight group helping each other?).
+
+## Exercise 2
+*Varian: Replicate the example of Home Mortgage Disclosure Act (HMDA) data. In particular, see and reproduce Figure 5 (interpret your findings).*
+
