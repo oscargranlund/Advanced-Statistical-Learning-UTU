@@ -3,7 +3,7 @@ title: "Tilastollinen Oppimisen Jatkokurssi Round 2"
 output: html_notebook
 ---
 
-##Exercise 1
+## Exercise 1
 
 *Varian: Replicate classification and regression trees and pruning in connection to Titanic example. (Notice that in 1. and 2. exercises, seemingly the obtained results are not necessarily exactly the same as reported in Varian (2014). Report and interpret your findings.)*
 
@@ -66,3 +66,76 @@ Females seem to have an almost as high chance of surviving as males have of dyin
 ## Exercise 2
 *Varian: Replicate the example of Home Mortgage Disclosure Act (HMDA) data. In particular, see and reproduce Figure 5 (interpret your findings).*
 
+This time we'll be using the party libary instead of rpart. We load the data from the Ecdat-library, note the discrepancy in spelling (HMDA/HDMA). We also plit into training and testing sets (80:20 split).
+```{r}
+library(Ecdat)
+library(party)
+data(Hdma)
+head(Hdma)
+Hdma = na.omit(Hdma)
+set.seed(2380)
+test_index = sample(seq(2380), size = 476)
+hmda.test = Hdma[test_index, ]
+hmda.train = Hdma[-test_index, ]
+```
+Next we use ctree to build a large classification tree.
+```{r}
+hmda.0 = ctree(deny ~ ., hmda.train, controls = ctree_control(teststat = "quad", testtype = "Bonferroni", mincriterion = 0.95, minsplit = 30, minbucket = 10))
+plot(hmda.0)
+```
+Since party doesn't perform k-fold crossvalidation on the mincriterion variable (the variable that determines if we should split or not) we will have to do it ourselves.
+```{r}
+set.seed(2030)
+meanerror = vector(mode = "double", length = 50)
+meanerrorvar = vector(mode = "double", length = 50)
+grid = exp(seq(-10, 0, length = 50))
+#grid[1] = (grid[1] + grid[2])/2
+folds = sample(cut(seq(1, 1904), breaks = 10, labels = FALSE), 1904)
+for (i in 1:50) {
+    errors = vector(mode = "double", length = 10)
+    for (j in 1:10) {
+        cvtestsetindex = which(folds == j, arr.ind = TRUE)
+        cvfoldtestset = hmda.train[cvtestsetindex, ]
+        cvfoldtrainset = hmda.train[-cvtestsetindex, ]
+        tmpmodel = ctree(deny ~ ., cvfoldtrainset, controls = ctree_control(teststat = "quad", testtype = "Bonferroni", mincriterion = 1 - grid[i], minsplit = 30, minbucket = 10))
+        tmppred = predict(tmpmodel, newdata = cvfoldtestset, type = "response")
+        conf = table(tmppred, cvfoldtestset$deny)
+        errors[j] = (conf[1, 2] + conf[2, 1])/sum(conf)
+    }
+    meanerror[i] = mean(errors)
+    meanerrorvar[i] = var(errors)
+}
+sdev = sqrt(meanerrorvar)/sqrt(1714)
+plot(x = log(grid), y = meanerror, ylim = c(0.05, 0.15))
+#arrows(log(grid), meanerror - sdev, log(grid), meanerror + sdev, length=0.025, angle=90, code = 3)
+abline(a = min(meanerror) + sdev[which.min(meanerror)], b = 0)
+```
+Crossvalidation suggests choosing the smallest of the values we tried, which gives a value as closeto 1 as possible for mincriterion (mincriterion = 1 - the p-value used to decide whether to include a split or not, the p-value needs to be larger than 1 - mincriterion). That yields the following model:
+```{r}
+hmda.pruned = ctree(deny ~ ., hmda.train, controls = ctree_control(teststat = "quad", testtype = "Bonferroni", mincriterion = 1 - grid[which.min(meanerror)], minsplit = 30, minbucket = 10))
+plot(hmda.pruned)
+```
+Since black is not a factor in any of the models we've looked at the kind of analysis that Varian did (repeat but without black in the dataset) is unnecessary. We can however again look at the confusion matrices and accuracies to see if choosing the mincriterion using crossvalidation gave us an increase in test accuracy.
+```{r}
+hmda.train.pred.0 = predict(hmda.0, newdata = hmda.train, type = "response")
+hmda.test.pred.0 = predict(hmda.0, newdata = hmda.test, type = "response")
+hmda.train.pred.pruned = predict(hmda.pruned, newdata = hmda.train, type = "response")
+hmda.test.pred.pruned = predict(hmda.pruned, newdata = hmda.test, type = "response")
+conf.hmda.train.0 = table(hmda.train.pred.0, hmda.train$deny)
+conf.hmda.test.0 = table(hmda.test.pred.0, hmda.test$deny)
+conf.hmda.train.pruned = table(hmda.train.pred.pruned, hmda.train$deny)
+conf.hmda.test.pruned = table(hmda.test.pred.pruned, hmda.test$deny)
+acc.hmda.train.0 = (conf.hmda.train.0[1, 1] + conf.hmda.train.0[2, 2])/sum(conf.hmda.train.0)
+acc.hmda.test.0 = (conf.hmda.test.0[1, 1] + conf.hmda.test.0[2, 2])/sum(conf.hmda.test.0)
+acc.hmda.train.pruned = (conf.hmda.train.pruned[1, 1] + conf.hmda.train.pruned[2, 2])/sum(conf.hmda.train.pruned)
+acc.hmda.test.pruned = (conf.hmda.test.pruned[1, 1] + conf.hmda.test.pruned[2, 2])/sum(conf.hmda.test.pruned)
+conf.hmda.train.0; prop.table(conf.hmda.train.0); acc.hmda.train.0
+conf.hmda.test.0; prop.table(conf.hmda.test.0); acc.hmda.test.0
+conf.hmda.train.pruned; prop.table(conf.hmda.train.pruned); acc.hmda.train.pruned
+conf.hmda.test.pruned; prop.table(conf.hmda.test.pruned); acc.hmda.test.pruned
+```
+This time it seems like we did not get an increase in test accuracy but that might have been expected judging by the plot of 1 - mincriterion versus error above. The accuracies seem pretty close but one thing of concern is the large amount of false positives, i.e. the model guesses yes too often, even when the answer is no. This might be because the dataset is a bit unbalanced with many more granted loans than denied loans.
+
+The most important predictor is if the person was denied mortgage insurance, where a yes gives a high chance of being denied. If the consumer was granted mortgage insurance the next most important predictor is their consumer credit score. A consumer credit score higher (higher equals worse) than 2 with a public bad credit record gives a roughly 50:50 chance of being denied, the same is true if their consumer credit score is lower than 2 and if more than 50% of their income goes towards debt payments. Otherwise they have a very high chance of getting a loan.
+
+## Exercise 3
