@@ -139,3 +139,184 @@ This time it seems like we did not get an increase in test accuracy but that mig
 The most important predictor is if the person was denied mortgage insurance, where a yes gives a high chance of being denied. If the consumer was granted mortgage insurance the next most important predictor is their consumer credit score. A consumer credit score higher (higher equals worse) than 2 with a public bad credit record gives a roughly 50:50 chance of being denied, the same is true if their consumer credit score is lower than 2 and if more than 50% of their income goes towards debt payments. Otherwise they have a very high chance of getting a loan.
 
 ## Exercise 3
+*In the lab, a classification tree was applied to the Carseats data set after converting Sales into a qualitative response variable. Now we will seek to predict Sales using regression trees and related approaches, treating the response as a quantitative variable.*
+
+#### (a)
+*Split the data set into a training set and a test set.*
+
+Import data from the ISLR library and attach the Carseats-dataset. Split into training and test sets with a 80:20 split.
+```{r}
+library(ISLR)
+attach(Carseats)
+cs = Carseats
+set.seed(400)
+test_index = sample(seq(400), 80)
+cs.test = cs[test_index, ]
+cs.trai = cs[-test_index, ]
+```
+#### (b)
+*Fit a regression tree to the training set. Plot the tree, and interpret the results. What test MSE do you obtain?*
+
+In order to predict Sales we will fit a largeish regression tree on the training set using rpart and plot it using rpart.plot.
+```{r}
+library(rpart)
+library(rpart.plot)
+cs.0 = rpart(Sales ~ ., data = cs.trai, method = "anova", control = rpart.control(minsplit = 10, minbucket = 3, cp = 0.01, xval = 10))
+cs.0.test.predict = predict(cs.0, newdata = cs.test)
+cs.0.trai.predict = predict(cs.0, newdata = cs.trai)
+cs.0.test.mse = mean((cs.0.test.predict - cs.test$Sales)^2)
+cs.0.trai.mse = mean((cs.0.trai.predict - cs.trai$Sales)^2)
+cs.0.test.mse; cs.0.trai.mse; rpart.plot(cs.0, type = 4, extra = 101, under = TRUE)
+```
+For this large tree the most important variable was ShelveLoc, followed by price. After this advertisment, age, shelve location (again) and prices (again) play a role. Further if the shelve location is Bad or Medium and the price is over 106 the tree gets very deep indicating that there is high variability there. For good shelve locations the tree is relatively short indicating lower vairability in sales.
+
+The test-MSE is 4.753288 while the train-MSE is 2.343768, perhaps we are overfitting?
+
+#### (c)
+*Use cross-validation in order to determine the optimal level of tree complexity. Does pruning the tree improve the test MSE?*
+
+The rpart library does 10-fold crossvalidation by default so we just need to interpret the results and choose a model.
+```{r}
+printcp(cs.0); plotcp(cs.0)
+cs.pruned = prune(cs.0, cp = (cs.0$cptable[which.min(cs.0$cptable[, 4]), 1]))
+rpart.plot(cs.pruned, type = 4, extra = 101, under = TRUE)
+```
+10-fold crossvalidation suggested a treesize of 6 (5 splits), this leaves more than 20 items per leaf (5% of all items) which seems reasonable. The best selling items seem to be the (relatively) cheap ones in a good shelve location and the ones that might be at a bad shelve location but are much cheaper than the competitors pricing.
+
+Next we compute the test-MSE to see if the pruning improved anything else than 
+interpretability.
+```{r}
+cs.pruned.test.predict = predict(cs.pruned, newdata = cs.test)
+cs.pruned.trai.predict = predict(cs.pruned, newdata = cs.trai)
+cs.pruned.test.mse = mean((cs.pruned.test.predict - cs.test$Sales)^2)
+cs.pruned.trai.mse = mean((cs.pruned.trai.predict - cs.trai$Sales)^2)
+cs.pruned.test.mse; cs.pruned.trai.mse
+```
+This time it seems like we took a slight hit in test-MSE, with the large tree the test-MSE was 4.753288 while the pruned model had a test-MSE of 5.041223, not too big of a drop, certainly compensated for with the increase in interpretability.
+
+## Exercise 4
+*This problem involves the OJ data set which is part of the ISLR package.*
+
+Loading data.
+```{r}
+library(ISLR)
+oj = data.frame(OJ)
+```
+#### (a)
+*Create a training set containing a random sample of 800 observations, and a test set containing the remaining observations.*
+
+Remove NA:s, sample random indexes.
+```{r}
+set.seed(1070)
+oj = na.omit(oj)
+len = length(oj[, 1])
+ts_index = sample(seq(len), len - 800)
+oj.test = oj[ts_index, ]
+oj.trai = oj[-ts_index, ]
+```
+#### (b)
+*Fit a tree to the training data, with Purchase as the response and the other variables as predictors. Use the summary() function to produce summary statistics about the tree, and describe the results obtained. What is the training error rate? How many terminal nodes does the tree have?*
+
+Purchase is a factor-variable, we will be fitting a classification tree using the Gini index as a split-criterion.
+```{r}
+oj.0 = rpart(Purchase ~ ., data = oj.trai, method = "class", parms = list(split = "gini"), control = rpart.control(maxsurrogate = 0, maxcompete = 0))
+summary(oj.0)
+```
+Interpreting the summary, it seems like the most important variable is LoyalCH, it being almost 10 times as important as PriceDiff. The third most important variable seems to be ListPriceDiff. It seems like the first split is quite even, ~500 going left and ~300 going right. At the right we already have a terminal node or leaf, predicting a MM for Purchased. This node (node 3) gives 70 misclassifications. To the left from the first split we have another split (node 2), again splitting on LoyalCH. This second split is again pretty even with ~300 going left and ~200 going right. To the left (node 4) we have our second terminal node, again predicting CH, this time with only 13 misclassifications. The third split (node 5) is more uneven with ~140 going left (node 10) and ~70 going right (node 11). Again we have a terminal node to the left (node 10), predicting CH with 25 misclassifications. To the right (node 11) we have an uneven split with ~20 going left (node 22) and ~50 going right (node 23). To the left we classify as CH and to the right as MM with 7 and 14 misclassifications respectively.
+
+Summing over all the misclassifications in the 5 terminal nodes and dividing by 800 we get the training error rate:
+```{r}
+(70+13+25+7+14)/800
+```
+
+#### (c)
+*Type in the name of the tree object in order to get a detailed text output. Pick one of the terminal nodes, and interpret the information displayed.*
+
+```{r}
+oj.0
+```
+Picking node 23 as the terminal node and following from the top we see that this is a node where LoyalCH is between 0.482935 and 0.705699 while the PriceDiff is smaller than 0.015. Finally the ListPriceDiff is smaller than 0.235 and we predict MM. We misclassify 14 out of 46 items.
+
+#### (d)
+*Create a plot of the tree, and interpret the results.*
+
+```{r}
+rpart.plot(oj.0, type = 4, extra = 2, under = TRUE)
+```
+Well it looks like our previous interpretation was correct but the plot is certainly a lot nicer to look at.
+
+#### (e)
+*Predict the response on the test data, and produce a confusion matrix comparing the test labels to the predicted test labels. What is the test error rate?*
+
+```{r}
+oj.0.pred.test = predict(oj.0, newdata = oj.test, type = "class")
+oj.0.conf.test = table(oj.0.pred.test, oj.test$Purchase)
+oj.0.erro.test = (oj.0.conf.test[1, 2] + oj.0.conf.test[2, 1]) / sum(oj.0.conf.test)
+oj.0.erro.test
+```
+
+#### (f)
+*Apply the cv.tree() function to the training set in order to determine the optimal tree size.*
+
+Since rpart does 10-fold crossvalidation as part of the initial modelling we will use the already computed values to determine the optimal tree size:
+```{r}
+printcp(oj.0); print("Optimal treesize:") ;oj.0$cptable[which.min(oj.0$cptable[, 4]), 2] + 1
+```
+
+#### (g)
+*Produce a plot with tree size on the x-axis and cross-validated classification error rate on the y-axis.*
+
+rpart has a method for this but the error rate is rescaled in relation to the error rate of the root node (0.385 in this case). Also the x-axis is the cp variable while the alternative x-axis is the treesize:
+```{r}
+plotcp(oj.0)
+```
+Instead we can create our own error plot:
+```{r}
+plot(x = oj.0$cptable[, 2] + 1, y = oj.0$cptable[, 4]*0.385, type = "l", ylim = c(0,1))
+```
+A disadvantage is that this plot doesn't have the min + standard error line that the documentation suggests to use for selecting the optimal treesize/cp. In our case this method suggest using a tree of size 2.
+
+#### (h)
+*Which tree size corresponds to the lowest cross-validated classification error rate?*
+
+A treesize of 5 corresponds to the lowest cross-validated classification error rate.
+
+## Exercise 5
+*Continued from previous*
+
+#### (i)
+*Produce a pruned tree corresponding to the optimal tree size obtained using cross-validation. If cross-validation does not lead to selection of a pruned tree, then create a pruned tree with five terminal nodes.*
+
+Since the previously mentioned method suggests a tree size of 2 and while the "smallest crossvalidation error" method suggests our original tree, which happens to also be of size 5, we prune to a treesize of 2:
+```{r}
+oj.p = prune(oj.0, cp = 0.1)
+```
+
+#### (j)
+*Compare the training error rates between the pruned and unpruned trees. Which is higher?*
+
+```{r}
+oj.p.pred.trai = predict(oj.p, newdata = oj.trai, type = "class")
+oj.0.pred.trai = predict(oj.0, newdata = oj.trai, type = "class")
+oj.p.conf.trai = table(oj.p.pred.trai, oj.trai$Purchase)
+oj.0.conf.trai = table(oj.0.pred.trai, oj.trai$Purchase)
+oj.p.erro.trai = (oj.p.conf.trai[1, 2] + oj.p.conf.trai[2, 1]) / sum(oj.p.conf.trai)
+oj.0.erro.trai = (oj.0.conf.trai[1, 2] + oj.0.conf.trai[2, 1]) / sum(oj.0.conf.trai)
+print("Unpruned training error:"); oj.0.erro.trai; print("Pruned training error:"); oj.p.erro.trai
+```
+The pruned model naturally has a higher trainign set error rate.
+
+#### (k)
+*Compare the test error rates between the pruned and unpruned trees. Which is higher?*
+
+```{r}
+oj.p.pred.test = predict(oj.p, newdata = oj.test, type = "class")
+oj.0.pred.test = predict(oj.0, newdata = oj.test, type = "class")
+oj.p.conf.test = table(oj.p.pred.test, oj.test$Purchase)
+oj.0.conf.test = table(oj.0.pred.test, oj.test$Purchase)
+oj.p.erro.test = (oj.p.conf.test[1, 2] + oj.p.conf.test[2, 1]) / sum(oj.p.conf.test)
+oj.0.erro.test = (oj.0.conf.test[1, 2] + oj.0.conf.test[2, 1]) / sum(oj.0.conf.test)
+print("Unpruned testing error:"); oj.0.erro.test; print("Pruned testing error:"); oj.p.erro.test
+```
+
+Again, the pruned model has a higher testing error which is also perhaps suggested since the exercise hints that this might be the optimal model :)
