@@ -1,0 +1,281 @@
+---
+title: "Tilastollinen Oppimisen Jatkokurssi Round 3"
+output: html_notebook
+---
+
+## Exercise 1
+
+*ISLR 8.7: In the lab, we applied random forests to the Boston data using mtry=6 and using ntree=25 and ntree=500. Create a plot displaying the test error resulting from random forests on this data set for a more comprehensive range of values for mtry and ntree. You can model your plot after Figure 8.10. Describe the results obtained.*
+
+The relevant code from the lab:
+```{r}
+library(MASS)
+library(randomForest)
+set.seed(1337)
+train = sample(1:nrow(Boston), nrow(Boston)/2)
+labmodel1 = randomForest(medv~., data = Boston, subset = train,
+                          mtry = 6, ntree = 25,  importance = TRUE)
+labmodel2 = randomForest(medv~., data = Boston, subset = train,
+                          mtry = 6, ntree = 500, importance = TRUE)
+#yhat = predict(labmodel1, newdata = Boston[-train, ])
+#plot(yhat, Boston[-train, "medv"])
+#abline(0,1)
+```
+Using two for loops we model for $\mathrm{mtry}=\{3, 6, 9, 13\}$ and $\mathrm{ntree}=\{1, 10, 20, 30, \dots, 1000 \}$, saving the test errors to a matrix.
+```{r}
+numberofpredictors = c(3, 6, 9, 13)
+numberoftrees = c(1:100)*10
+testseterrors = matrix(data = NA, nrow = 4, ncol = 101)
+for (i in 1:4) {
+  tmp = randomForest(medv~., data = Boston, subset = train,
+                     mtry = numberofpredictors[i], ntree = 1,  importance = TRUE)
+  tmp.pred = predict(tmp, newdata = Boston[-train, ])
+  testseterrors[i, 1] = mean((tmp.pred - Boston[-train, "medv"])^2)
+  for (j in 1:100) {
+    tmp = randomForest(medv~., data = Boston, subset = train, 
+                       mtry = numberofpredictors[i], ntree = numberoftrees[j],  importance = TRUE)
+    tmp.pred = predict(tmp, newdata = Boston[-train, ])
+    testseterrors[i, j + 1] = mean((tmp.pred - Boston[-train, "medv"])^2)
+  }
+}
+```
+Now we plot the testerrors with $\mathrm{mtry} = 3$ in red, $\mathrm{mtry} = 6$ in green, $\mathrm{mtry} = 9$ in blue and $\mathrm{mtry} = 13$ in black.
+```{r}
+plot( c(1, numberoftrees), testseterrors[1,], type = "l", col = "red",
+      xlab = "ntree", ylab = "Test set error")
+lines(c(1, numberoftrees), testseterrors[2,], type = "l", col = "green")
+lines(c(1, numberoftrees), testseterrors[3,], type = "l", col = "blue")
+lines(c(1, numberoftrees), testseterrors[4,], type = "l", col = "black")
+```
+Since $\mathrm{ntree} = 1$ gives us some scaling issues we zoom in, it seems like $\mathrm{mtry} = \{6, 9, 13\}$ all perform about equally well while $\mathrm{mtry} = 3$ clearly performed the worst. This is a bit surprising since the videos suggested using $m=\sqrt{p}\approx4$. There doesn't seem to be a noticable improvement in test error after $\mathrm{ntree}\approx275$.
+```{r}
+plot( c(1, numberoftrees), testseterrors[1,], type = "l", col = "red",
+      xlab = "ntree", ylab = "Test set error", ylim = c(10, 15))
+lines(c(1, numberoftrees), testseterrors[2,], type = "l", col = "green")
+lines(c(1, numberoftrees), testseterrors[3,], type = "l", col = "blue")
+lines(c(1, numberoftrees), testseterrors[4,], type = "l", col = "black")
+```
+
+## Exercise 2
+*ISLR 8.8: In the lab, a classification tree was applied to the Carseats data set after converting Sales into a qualitative response variable. Now we will seek to predict Sales using regression trees and related approaches, treating the response as a quantitative variable.*
+
+#### (a)
+*Split the data set into a training set and a test set.*
+
+Import data from the ISLR library and attach the Carseats-dataset. Split into training and test sets with a 80:20 split.
+```{r}
+library(ISLR)
+attach(Carseats)
+cs = Carseats
+set.seed(400)
+test_index = sample(seq(400), 80)
+cs.test = cs[test_index, ]
+cs.trai = cs[-test_index, ]
+```
+For the previous exercises using regression trees, the best test-MSE was 4.753288 an the most important variables were ShelveLoc followed by Price, Advertisement and Age.
+
+#### (d)
+*Use the bagging approach in order to analyze this data. What test MSE do you obtain? Use the importance() function to determine which variables are most important.*
+Determine $\mathrm{ntree}$, we get the bagging model by setting $\mathrm{mtry}=10$ since the dataset has 11 variables if we count the Sales variable.
+```{r}
+numberofpredictors = c(10)
+numberoftrees = c(1:20)*25
+testseterrors = matrix(data = NA, nrow = 1, ncol = 21)
+for (i in 1:1) {
+  tmp = randomForest(Sales~., data = cs.trai,
+                     mtry = numberofpredictors[i], ntree = 1,  importance = TRUE)
+  tmp.pred = predict(tmp, newdata = cs.test)
+  testseterrors[i, 1] = mean((tmp.pred - cs.test[, "Sales"])^2)
+  for (j in 1:20) {
+    tmp = randomForest(Sales~., data = cs.trai, 
+                       mtry = numberofpredictors[i], ntree = numberoftrees[j],  importance = TRUE)
+    tmp.pred = predict(tmp, newdata = cs.test)
+    testseterrors[i, j + 1] = mean((tmp.pred - cs.test[, "Sales"])^2)
+  }
+}
+```
+Plot the test-errors agianst $\mathrm{ntree}$, seems like we should choose $\mathrm{ntree} = 125$
+```{r}
+plot( c(1, numberoftrees), testseterrors[1,], type = "l", col = "red",
+      xlab = "ntree", ylab = "Test set error")
+```
+Final model for bagging:
+```{r}
+cs.bag = randomForest(Sales~., data = cs.trai, ntree = 125, mtry = 10)
+cs.bag.mse = mean((predict(cs.bag, newdata = cs.test) - cs.test[, "Sales"])^2)
+importance(cs.bag); print(cs.bag.mse)
+```
+Again, ShelveLoc is the most important followedd by Price. After this CompPrice takes the spot from Advertising and Age is still the 4:th most important variable.
+
+#### (e)
+*Use random forests to analyze this data. What test MSE do you obtain? Use the importance() function to determine which variables are most important. Describe the effect of m, the number of variables considered at each split, on the error rate obtained.*
+
+Using the same approach as in 2.d, we find good $\mathrm{ntree}$ and $\mathrm{mtry}$ values.
+```{r}
+numberofpredictors = c(3, 5, 7, 9)
+numberoftrees = c(1:20)*25
+testseterrors = matrix(data = NA, nrow = 4, ncol = 21)
+for (i in 1:4) {
+  tmp = randomForest(Sales~., data = cs.trai,
+                     mtry = numberofpredictors[i], ntree = 1,  importance = TRUE)
+  tmp.pred = predict(tmp, newdata = cs.test)
+  testseterrors[i, 1] = mean((tmp.pred - cs.test[, "Sales"])^2)
+  for (j in 1:20) {
+    tmp = randomForest(Sales~., data = cs.trai, 
+                       mtry = numberofpredictors[i], ntree = numberoftrees[j],  importance = TRUE)
+    tmp.pred = predict(tmp, newdata = cs.test)
+    testseterrors[i, j + 1] = mean((tmp.pred - cs.test[, "Sales"])^2)
+  }
+}
+plot( c(1, numberoftrees), testseterrors[1,], type = "l", col = "red",
+      xlab = "ntree", ylab = "Test set error", ylim = c(0, 5))
+lines(c(1, numberoftrees), testseterrors[2,], type = "l", col = "green")
+lines(c(1, numberoftrees), testseterrors[3,], type = "l", col = "blue")
+lines(c(1, numberoftrees), testseterrors[4,], type = "l", col = "black")
+```
+The best simplest model seems to be the blue one, meaning we select $\mathrm{ntree} = 125$ and $\mathrm{mtry} = 7$.
+```{r}
+cs.rfo = randomForest(Sales~., data = cs.trai, ntree = 125, mtry = 7)
+cs.rfo.mse = mean((predict(cs.rfo, newdata = cs.test) - cs.test[, "Sales"])^2)
+importance(cs.rfo); cs.rfo.mse
+```
+THe most important variable was again ShelveLoc, followed by Price, CompPrice and Age. THe Test-MSE was 1.954461. It seems like $m=9$ and $m=7$ performed very similarly while $m=5$ was a tiny bit worse and $m=3$ was the worst performer by a larger margin.
+
+## Exercise 3
+*ISLR 8.10: We now use boosting to predict Salary in the Hitters data set.*
+
+Loading data.
+```{r}
+library(ISLR)
+hit = data.frame(Hitters)
+```
+#### (a)
+*Remove the observations for whom the salary information is unknown, and then log-transform the salaries.*
+Remove NA's from Salary column, log-transform the Salary column
+```{r}
+set.seed(1070)
+hit = hit[!is.na(hit$Salary),]
+hit$Salary = log(hit$Salary)
+```
+#### (b)
+*Create a training set consisting of the first 200 observations, and a test set consisting of the remaining observations.*
+```{r}
+hit.trai = hit[seq(1:200), ]
+hit.test = hit[-seq(1:200), ]
+```
+#### (c)
+*Perform boosting on the training set with 1,000 trees for a range of values of the shrinkage parameter λ. Produce a plot with different shrinkage values on the x-axis and the corresponding training set MSE on the y-axis.*
+
+We let $\lambda$ be from $0.00005$ to $10^{-0.05}$ and fit a model for each value. Then we calculate the test and training MSE.
+```{r}
+library(gbm)
+lambda = 10^seq(from = -5, to = -0.05, by = 0.05)
+traimse = vector(mode = "numeric", length = length(lambda))
+testmse = vector(mode = "numeric", length = length(lambda))
+for (i in 1:length(lambda)) {
+  tmp = gbm(Salary~., distribution = "gaussian", data = hit.trai,
+            n.trees = 1000, shrinkage = lambda[i])
+  traimse[i] = mean((predict(tmp, newdata = hit.trai, n.trees=1000)-hit.trai[, "Salary"])^2)
+  testmse[i] = mean((predict(tmp, newdata = hit.test, n.trees=1000)-hit.test[, "Salary"])^2)
+}
+plot(lambda, traimse)
+```
+
+#### (d)
+*Produce a plot with different shrinkage values on the x-axis and the corresponding test set MSE on the y-axis.*
+
+```{r}
+plot(lambda, testmse); lambda[which.min(testmse)]
+```
+
+## Exercise 4
+
+#### (e)
+*Compare the test MSE of boosting to the test MSE that results from applying two of the regression approaches seen in Chapters 3 and 6.*
+
+```{r}
+library(glmnet)
+modmatrix = model.matrix.lm(Salary~., data = hit.trai)
+hit.lm = lm(Salary~., data = hit.trai)
+hit.la = cv.glmnet(x = modmatrix, y = hit.trai[, "Salary"], lambda = lambda)
+hit.la = glmnet(x = modmatrix, y = hit.trai[, "Salary"], lambda = hit.la$lambda.min)
+lmmse = mean((predict(hit.lm, newdata = hit.test) - hit.test[, "Salary"])^2)
+lamse = mean((predict(hit.la, newx = model.matrix.lm(Salary~., data = hit.test)) - hit.test[, "Salary"])^2)
+print(lmmse); print(lamse); print(min(testmse))
+```
+Boosting clearly gives a much lower error when we select the best $\lambda$
+
+#### (f)
+*Which variables appear to be the most important predictors in the boosted model?*
+
+```{r}
+hit.gbm = gbm(Salary~., distribution = "gaussian", data = hit.trai,
+              n.trees = 1000, shrinkage = 0.05623413)
+summary(hit.gbm)
+```
+CHits is by far the most important predictor, followed by CWalks. After this the difference is not so big anymore but the order is PutOuts, CRuns, CAtBat and so on.
+
+#### (g)
+*Now apply bagging to the training set. What is the test set MSE for this approach?*
+Same as before, we find a good $\mathrm{ntree}$.
+```{r}
+numberofpredictors = c(19)
+numberoftrees = c(1:20)*25
+testseterrors = matrix(data = NA, nrow = 1, ncol = 21)
+for (i in 1:1) {
+  tmp = randomForest(Salary~., data = hit.trai,
+                     mtry = numberofpredictors[i], ntree = 1,  importance = TRUE)
+  tmp.pred = predict(tmp, newdata = hit.test)
+  testseterrors[i, 1] = mean((tmp.pred - hit.test[, "Salary"])^2)
+  for (j in 1:20) {
+    tmp = randomForest(Salary~., data = hit.trai, 
+                       mtry = numberofpredictors[i], ntree = numberoftrees[j],  importance = TRUE)
+    tmp.pred = predict(tmp, newdata = hit.test)
+    testseterrors[i, j + 1] = mean((tmp.pred - hit.test[, "Salary"])^2)
+  }
+}
+plot( c(1, numberoftrees), testseterrors[1,], type = "l", col = "red",
+      xlab = "ntree", ylab = "Test set error")
+```
+We select $\mathrm{ntree} = 175$.
+```{r}
+hit.bag = randomForest(Salary~., data = hit.trai, mtry = 19, ntree = 1,  importance = TRUE)
+mean((predict(hit.bag, hit.test)-hit.test[, "Salary"])^2)
+```
+For bagging the Test-MSE was 0.3861, a bit higher than GBM but lower than the least-squares and lasso fit.
+
+
+## Exercise 5
+*ISLR 8.11: This question uses the Caravan data set.*
+```{r}
+attach(Caravan)
+car = Caravan
+```
+
+#### (a)
+*Create a training set consisting of the first 1,000 observations, and a test set consisting of the remaining observations.*
+```{r}
+car.trai = car[ seq(1:1000), ]
+car.test = car[-seq(1:1000), ]
+```
+
+#### (b)
+*Fit a boosting model to the training set with Purchase as the response and the other variables as predictors. Use 1,000 trees, and a shrinkage value of 0.01. Which predictors appear to be the most important?*
+
+```{r}
+car.gbm = gbm((unclass(Purchase)-1)~., distribution = "bernoulli", data = car.trai,
+              n.trees = 1000, shrinkage = 0.01)
+summary(car.gbm)
+```
+The predictor PPERSAUT seems to be the most important followed by MKOOPKLA. Then there is a jump and the rest are approximately equally important.
+
+#### (c)
+*Use the boosting model to predict the response on the test data. Predict that a person will make a purchase if the estimated probability of purchase is greater than 20 %. Form a confusion matrix. What fraction of the people predicted to make a purchase do in fact make one? How does this compare with the results obtained from applying KNN or logistic regression to this data set?*
+
+```{r}
+pred = predict(car.gbm, newdata = car.test, n.trees = 1000)
+realpred = ifelse(pred > 0.2, yes = 1, no = 0)
+confusion = table(realpred, car.test$Purchase)
+print(confusion)
+```
+So not a single caravan was predicted to be purchased...
