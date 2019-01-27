@@ -389,3 +389,4 @@ summary(fit.poly)
 *Overall, which approach seems to give the best results on this data?*
 This time, linear and radial had the same test set missclassification rate but radial had a lower training missclassification rate.
 
+FIN.
