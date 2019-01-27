@@ -58,7 +58,10 @@ $$ \beta_0 + \beta_1X_1 + \beta_2X_2 = 0 = 0.5 - X_1 + X_2.$$
 Classify Red if
 $$ \beta_0 + \beta_1X_1 + \beta_2X_2 = 0.5 - X_1 + X_2 > 0,$$
 Blue otherwise. $\beta_0 = 0.5,~\beta_1 = -1,~\beta_2 = 1$.
+<<<<<<< HEAD
 
+=======
+>>>>>>> 79500f7e8f64dfc1884704ef3bcf43aebb219cd4
 #### (d)
 *On your sketch, indicate the margin for the maximal margin hyperplane.*
 
@@ -389,4 +392,7 @@ summary(fit.poly)
 *Overall, which approach seems to give the best results on this data?*
 This time, linear and radial had the same test set missclassification rate but radial had a lower training missclassification rate.
 
+<<<<<<< HEAD
 FIN.
+=======
+>>>>>>> 79500f7e8f64dfc1884704ef3bcf43aebb219cd4
