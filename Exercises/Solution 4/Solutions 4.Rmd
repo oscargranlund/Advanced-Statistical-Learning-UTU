@@ -1,0 +1,391 @@
+---
+title: "Tilastollinen Oppimisen Jatkokurssi Round 4"
+output: html_notebook
+---
+## Exercise 1
+*ISLR 9.2: We have seen that in p = 2 dimensions, a linear decision boundary takes the form β0+β1X1+β2X2 = 0. We now investigate a non-linear decision boundary.*
+
+#### (a)
+*Sketch the curve*
+$$(1+X_1)^2 + (2-X_2)^2 = 4.$$
+![Sketch](1a.PNG)
+
+
+#### (b)
+*On your sketch, indicate the set of points for which*
+$$(1+X_1)^2 + (2-X_2)^2 > 4,$$
+*as well as the set of points for which*
+$$(1+X_1)^2 + (2-X_2)^2 \leq 4.$$
+![Sketch](1b.PNG)
+
+The points in blue are the first ones, the points in white the second ones
+
+#### (c)
+*Suppose that a classifier assigns an observation to the blue class if*
+$$(1+X_1)^2 + (2-X_2)^2 > 4,$$
+*and to the red class otherwise. To what class is the observation (0, 0) classified? (−1, 1)? (2, 2)? (3, 8)?*
+
+(0, 0)  -> Blue
+(-1, 1) -> Red
+(2, 2)  -> Blue
+(3, 8)  -> Blue
+
+#### (d)
+*Argue that while the decision boundary in (c) is not linear in terms of X1 and X2, it is linear in terms of $X_1$, $X_2^1$, $X_2$, and $X_2^2$.*
+
+Observe that (0, 0) and (0, 4) are both classified as blue but (0, 2) which is on the line from (0, 0) to (0, 4) is classified as red. Thus the boundary can not be linear in terms of X1 only X1 and X2. Expanding the equation and setting $X_3=X_1^2$ and $X_4=X_2^2$ we get
+$$4=(1+X_1)^2 + (2-X_2)^2=1+2X_1+X_1^2+4-4X_2+X^2_2=1+2X_1-4X_2+X_3+X_4=4$$
+as the decision boundary. This is a linear decision boundary.
+
+## Exercise 2
+*ISLR 9.3: Here we explore the maximal margin classifier on a toy data set*
+
+#### (a)
+*We are given n = 7 observations in p = 2 dimensions. For each observation, there is an associated class label. Sketch the observations.*
+
+![Sketch](2a.png)
+
+#### (b)
+*Sketch the optimal separating hyperplane, and provide the equation for this hyperplane (of the form (9.1)).*
+
+![Optimal separatin hyperplane in green.](2b.png)
+
+$$ \beta_0 + \beta_1X_1 + \beta_2X_2 = 0 = 0.5 - X_1 + X_2.$$
+
+#### (c)
+*Describe the classification rule for the maximal margin classifier. It should be something along the lines of “Classify to Red if β0 + β1X1 + β2X2 > 0, and classify to Blue otherwise.” Provide the values for β0, β1, and β2.*
+
+Classify Red if
+$$ \beta_0 + \beta_1X_1 + \beta_2X_2 = 0.5 - X_1 + X_2 > 0,$$
+Blue otherwise. $\beta_0 = 0.5,~\beta_1 = -1,~\beta_2 = 1$.
+
+#### (d)
+*On your sketch, indicate the margin for the maximal margin hyperplane.*
+
+![Margin (or two times the margin in orange).](2d.png)
+
+#### (e)
+*Indicate the support vectors for the maximal margin classifier*
+
+![Support vectors indicated by purple.](2e.png)
+
+#### (f)
+*Argue that a slight movement of the seventh observation would not affect the maximal margin hyperplane.*
+
+The seventh observation (4, 1) is far from the separating hyperplane and not a support vector. Moving it at most a duistance of $\sqrt{2}$ will not change the optimal separating hyperplane.
+
+#### (g)
+*Sketch a hyperplane that is not the optimal separating hyperplane, and provide the equation for this hyperplane.*
+
+![In gray.](2g.png)
+
+$$ \beta_0 + \beta_1X_1 + \beta_2X_2 = -1 + X_1 - \frac{4}{3}X_2 = 0. $$
+
+#### (h)
+*Draw an additional observation on the plot so that the two classes are no longer separable by a hyperplane.*
+
+![Blue observation in the middle of the red ones.](2h.png)
+
+## Exercise 3
+*ISLR 9.5: We have seen that we can fit an SVM with a non-linear kernel in order to perform classification using a non-linear decision boundary. We will now see that we can also obtain a non-linear decision boundary by performing logistic regression using non-linear transformations of the features.*
+
+#### (a)
+*Generate a data set with n = 500 and p = 2, such that the observations belong to two classes with a quadratic decision boundary between them. For instance, you can do this as follows:*
+```{r}
+set.seed(92)
+x1 = runif(500) - 0.5
+x2 = runif(500) - 0.5
+y = 1 * (x1^2 - x2^2 > 0)
+train = data.frame(y, x1, x2)
+```
+
+#### (b)
+*Plot the observations, colored according to their class labels. Your plot should display X1 on the x-axis, and X2 on the yaxis.*
+```{r}
+plot(x = train$x1[y == 1], y = train$x2[y == 1], type = "p", col = "red", xlim = c(-0.5, 0.5), ylim = c(-0.5, 0.5))
+points(x = train$x1[y == 0], y = train$x2[y == 0], col = "blue")
+```
+
+#### (c)
+*Fit a logistic regression model to the data, using X1 and X2 as predictors.*
+```{r}
+fit.loglinear = glm(y ~ x1 + x2, family=binomial(link='logit'), data = train)
+```
+
+#### (d)
+*Apply this model to the training data in order to obtain a predicted class label for each training observation. Plot the observations, colored according to the predicted class labels. The decision boundary should be linear.*
+```{r}
+fit.loglinear.pred = predict(fit.loglinear, data = train, type = "response")
+train$pred = 1 * (fit.loglinear.pred < 0.5)
+plot(x = train$x1[train$pred == 1], y = train$x2[train$pred == 1], type = "p", col = "red", xlim = c(-0.5, 0.5), ylim = c(-0.5, 0.5))
+points(x = train$x1[train$pred == 0], y = train$x2[train$pred == 0], col = "blue")
+```
+
+#### (e)
+*Now fit a logistic regression model to the data using non-linear functions of X1 and X2 as predictors (e.g. X2 1 , X1×X2, log(X2), and so forth).*
+```{r}
+train$x12 = train$x1*train$x1
+train$x22 = train$x2*train$x2
+train$cross = train$x1*train$x2
+fit.lognon = glm(y ~ x1 + x2 + x12 + x22 + cross, family=binomial(link='logit'), data = train)
+```
+
+#### (f)
+*Apply this model to the training data in order to obtain a predicted class label for each training observation. Plot the observations, colored according to the predicted class labels. The decision boundary should be obviously non-linear. If it is not, then repeat (a)-(e) until you come up with an example in which the predicted class labels are obviously non-linear.*
+```{r}
+fit.lognon.pred = predict(fit.lognon, data = train, type = "response")
+train$pred = 1 * (fit.lognon.pred > 0.5)
+plot(x = train$x1[train$pred == 1], y = train$x2[train$pred == 1], type = "p", col = "red", xlim = c(-0.5, 0.5), ylim = c(-0.5, 0.5))
+points(x = train$x1[train$pred == 0], y = train$x2[train$pred == 0], col = "blue")
+```
+
+#### (g)
+*Fit a support vector classifier to the data with X1 and X2 as predictors. Obtain a class prediction for each training observation. Plot the observations, colored according to the predicted class labels*
+```{r}
+library(e1071)
+fit.svmlin = svm(x = as.matrix(subset(train, select=c(x1, x2))), y = as.factor(train$y), kernel = "linear", cost = 1)
+fit.svmlin.pred = predict(fit.svmlin, data = train, type = "response")
+train$pred = 1 * (as.numeric(fit.svmlin.pred) - 1)
+plot(x = train$x1[train$pred == 1], y = train$x2[train$pred == 1], type = "p", col = "red", xlim = c(-0.5, 0.5), ylim = c(-0.5, 0.5))
+points(x = train$x1[train$pred == 0], y = train$x2[train$pred == 0], col = "blue")
+```
+
+#### (h)
+*Fit a SVM using a non-linear kernel to the data. Obtain a class prediction for each training observation. Plot the observations, colored according to the predicted class labels.*
+```{r}
+fit.svmnon = svm(x = as.matrix(subset(train, select=c(x1, x2))), y = as.factor(train$y), kernel = "polynomial", cost = 1, gamma=1, coef0 = 1, degree = 2)
+fit.svmnon.pred = predict(fit.svmnon, data = train, type = "response")
+train$pred = 1 * (as.numeric(fit.svmnon.pred) - 1)
+plot(x = train$x1[train$pred == 1], y = train$x2[train$pred == 1], type = "p", col = "red", xlim = c(-0.5, 0.5), ylim = c(-0.5, 0.5))
+points(x = train$x1[train$pred == 0], y = train$x2[train$pred == 0], col = "blue")
+```
+
+#### (i)
+*Comment on your results.*
+Linear logistic regression wasn't all that good.
+Linear logistic regression on quadratic predictors worked well.
+Linear SVM was really bad.
+Non-linear SVM with quadratic kernel of degree 2 performed well, with some missclassifications on the decision boundary (probably due to the cost parameter).
+
+We can try with the cost parameter set high enough.
+```{r}
+fit.svmnon = svm(x = as.matrix(subset(train, select=c(x1, x2))), y = as.factor(train$y), kernel = "polynomial", cost = 1000000, gamma=1, coef0 = 1, degree = 2)
+fit.svmnon.pred = predict(fit.svmnon, data = train, type = "response")
+train$pred = 1 * (as.numeric(fit.svmnon.pred) - 1)
+plot(x = train$x1[train$pred == 1], y = train$x2[train$pred == 1], type = "p", col = "red", xlim = c(-0.5, 0.5), ylim = c(-0.5, 0.5))
+points(x = train$x1[train$pred == 0], y = train$x2[train$pred == 0], col = "blue")
+```
+This worked since a higher cost parameter approaches the maximum margin classifier (as opposed to the soft margin calssifier).
+
+## Exercise 4
+*ISLR 9.7: In this problem, you will use support vector approaches in order to predict whether a given car gets high or low gas mileage based on the Auto data set.*
+
+#### (a)
+*Create a binary variable that takes on a 1 for cars with gas mileage above the median, and a 0 for cars with gas mileage below the median.*
+We need to create a matrix with training data, here we leave out the name of the car and the constant column of zeros from the resulting matrix.
+```{r}
+library(ISLR)
+set.seed(92)
+train = model.matrix(~., subset(Auto, select = c(-mpg, -name)))[, 2:8]
+cutoff = median(Auto$mpg)
+y = as.factor(1 * (Auto$mpg > cutoff))
+```
+
+#### (b)
+*Fit a support vector classifier to the data with various values of cost, in order to predict whether a car gets high or low gas mileage. Report the cross-validation errors associated with different values of this parameter. Comment on your results.*
+```{r}
+set.seed(92)
+gridlen = 50
+grid = 10^seq(from = -2, to = 2, length.out = gridlen)
+folds = sample(cut(seq(1, 392), breaks = 10, labels = FALSE), 392)
+meanmissclass = vector(mode = "double", length = gridlen)
+for (i in 1:gridlen) {
+  missclass = vector(mode = "double", length = 10)
+  for (j in 1:10) {
+    cvtestindex = which(folds == j, arr.ind = TRUE)
+    cvtestx = train[cvtestindex, ]
+    cvtesty = y[cvtestindex]
+    cvtraix = train[-cvtestindex, ]
+    cvtraiy = y[-cvtestindex]
+    tmpfit  = svm(x = cvtraix, y = cvtraiy, kernel = "linear", cost = grid[i])
+    tmppred = predict(tmpfit, newdata = cvtestx, type = "response")
+    conf = table(tmppred, cvtesty)
+    missclass[j] = (conf[1, 2] + conf[2, 1])/sum(conf)
+  }
+  meanmissclass[i] = mean(missclass)
+}
+plot(x = log10(grid), y = meanmissclass)
+```
+Disregarding the single point with low misslcassification rate near 0, it seems like log10(cost) should be around 1 or a little lower, meaning that the cost should be around 10 or a little lower. This gives a misscalssification rate around 0.0845.
+
+#### (c)
+*Now repeat (b), this time using SVMs with radial and polynomial basis kernels, with different values of gamma and degree and cost. Comment on your results.*
+```{r}
+set.seed(92)
+train = scale(train)
+gridlen = 10
+gridcost = 10^seq(from = -2, to = 2, length.out = gridlen)
+gridgamma = 10^seq(from = -2, to = 2, length.out = gridlen)
+griddegree = seq(from = 2, to = gridlen, by = 1)
+folds = sample(cut(seq(1, 392), breaks = 10, labels = FALSE), 392)
+missclass = array(0, c(10, gridlen, gridlen, gridlen))
+for (fold in 1:10) {
+  cvtestindex = which(folds == fold, arr.ind = TRUE)
+  cvtestx = train[cvtestindex, ]
+  cvtesty = y[cvtestindex]
+  cvtraix = train[-cvtestindex, ]
+  cvtraiy = y[-cvtestindex]
+  for (cost in 1:gridlen) {
+    for (gamma in 1:gridlen) {
+      tmpfit = svm(x = cvtraix, y = cvtraiy, kernel = "radial",
+                   cost = gridcost[cost], gamma = gridgamma[gamma])
+      tmppred = predict(tmpfit, newdata = cvtestx, type = "response")
+      conf = table(tmppred, cvtesty)
+      missclass[fold, cost, gamma, 1] = (conf[1, 2] + conf[2, 1])/sum(conf)
+      for (deg in 2:gridlen) {
+        tmpfit = svm(x = cvtraix, y = cvtraiy, kernel = "polynomial",
+                     cost = gridcost[cost], gamma = gridgamma[gamma],
+                     coef0 = 1, degree = griddegree[deg-1])
+        tmppred = predict(tmpfit, newdata = cvtestx, type = "response")
+        conf = table(tmppred, cvtesty)
+        missclass[fold, cost, gamma, deg] = (conf[1, 2] + conf[2, 1])/sum(conf)
+      }
+    }
+  }
+}
+```
+
+```{r}
+meanmissclass = apply(missclass, c(2,3,4), mean)
+persp(log10(gridcost), log10(gridgamma), meanmissclass[, , 1], phi = 10, theta = 35)
+```
+For the radial basis kernel it seems like the missclassification error rate decreases with cost and increases with gamma
+```{r}
+persp(log10(gridcost), log10(gridgamma), meanmissclass[, , 2], phi = 10, theta = 35)
+```
+For the polynomial kernel with degree 2 there seems to be some kind of saddle-point phenomenon.
+```{r}
+persp(log10(gridcost), log10(gridgamma), meanmissclass[, , 10], phi = 10, theta = 35)
+```
+For the polynomial kernel with degree 10 the missclassification rate looks like a valley.
+```{r}
+persp(log10(gridcost), log10(gridgamma), meanmissclass[, , 5], phi = 10, theta = 35)
+```
+For the polynomial kernel with degree 5 the missclassification rate still looks like a valley but for high gamma-values there seems to be no change in missclassification rate when the cost changes.
+```{r}
+meanmissclass[which.min(meanmissclass)]; gridcost[5]; gridgamma[6]
+```
+The lowest missclassification error seems to be cost ~ 0.6 and gamma ~ 1.7 with the radial basis kernel.
+
+```{r}
+meanmissclass[which.min(meanmissclass[,,-1])]; gridcost[9]; gridgamma[2]
+```
+For the polynomial kernels the best hyperparameters were cost ~ 36, gamma ~ 0.028 and degree = 9.
+
+#### (d)
+*Make some plots to back up your assertions in (b) and (c).*
+
+Not sure what plots they want me to make other than the ones I already made...
+
+## Exercise 5
+*ISLR 9.8: This problem involves the OJ data set which is part of the ISLR package.*
+
+#### (a)
+*Create a training set containing a random sample of 800 observations, and a test set containing the remaining observations.*
+```{r}
+set.seed(92)
+ts = sample(seq(1:dim(OJ)[1]), 800)
+traix = subset(OJ[ts, ], select=-Purchase)
+testx = subset(OJ[-ts, ], select=-Purchase)
+traix = model.matrix(~., traix)[, -1]
+testx = model.matrix(~., testx)[, -1]
+traiy = OJ$Purchase[ts]
+testy = OJ$Purchase[-ts]
+```
+
+#### (b)
+*Fit a support vector classifier to the training data using cost=0.01, with Purchase as the response and the other variables as predictors. Use the summary() function to produce summary statistics, and describe the results obtained.*
+```{r}
+fit = svm(x = traix, y = traiy, cost = 0.1, kernel = "linear")
+summary(fit)
+```
+326 support vectors with quite an even spread between CH and MM classes.
+
+#### (c)
+*What are the training and test error rates?*
+```{r}
+conf = table(fit$fitted, traiy)
+traimc = (conf[1, 2] + conf[2, 1])/sum(conf)
+conf = table(predict(fit, newdata = testx, type = "response"), testy)
+testmc = (conf[1, 2] + conf[2, 1])/sum(conf)
+traimc; testmc
+```
+0.1525 and 0.211 respectively.
+
+#### (d)
+*Use the tune() function to select an optimal cost. Consider values in the range 0.01 to 10.*
+```{r}
+fit.tuned = tune(svm, train.x = traix, train.y = traiy, kernel = "linear",
+                 ranges=list(cost=10^seq(-2, 1, length.out = 100)))
+```
+```{r}
+summary(fit.tuned)
+```
+Tuning shows we have many costs with the same misscalssification rate, one of these is the cost 0.01149757.
+
+#### (e)
+*Compute the training and test error rates using this new value for cost.*
+```{r}
+fit.best = svm(x = traix, y = traiy, cost = 0.01149757, kernel = "linear")
+conf = table(fit.best$fitted, traiy)
+traimc = (conf[1, 2] + conf[2, 1])/sum(conf)
+conf = table(predict(fit.best, newdata = testx, type = "response"), testy)
+testmc = (conf[1, 2] + conf[2, 1])/sum(conf)
+traimc; testmc
+```
+0.1575 and 0.203 respectively, a bit better.
+
+#### (f)
+*Repeat parts (b) through (e) using a support vector machine with a radial kernel. Use the default value for gamma.*
+```{r}
+fit.radial.tune = tune(svm, train.x = traix, train.y = traiy, kernel = "radial",
+                 ranges=list(cost=10^seq(-2, 1, length.out = 30)))
+summary(fit.radial.tune)
+```
+```{r}
+fit.radial = svm(x = traix, y = traiy, cost = 1.88739182, kernel = "radial")
+conf = table(fit.radial$fitted, traiy)
+traimc = (conf[1, 2] + conf[2, 1])/sum(conf)
+conf = table(predict(fit.radial, newdata = testx, type = "response"), testy)
+testmc = (conf[1, 2] + conf[2, 1])/sum(conf)
+traimc; testmc
+```
+```{r}
+summary(fit.radial)
+```
+Only 333 support vectors, evenly distributed.
+
+#### (g)
+*Repeat parts (b) through (e) using a support vector machine with a polynomial kernel. Set degree=2.*
+```{r}
+fit.poly.tune = tune(svm, train.x = traix, train.y = traiy, kernel = "polynomial", degree = 2,
+                 ranges=list(cost=10^seq(-2, 1, length.out = 30)))
+summary(fit.poly.tune)
+```
+```{r}
+fit.poly = svm(x = traix, y = traiy, cost = 10, kernel = "polynomial", degree = 2)
+conf = table(fit.poly$fitted, traiy)
+traimc = (conf[1, 2] + conf[2, 1])/sum(conf)
+conf = table(predict(fit.poly, newdata = testx, type = "response"), testy)
+testmc = (conf[1, 2] + conf[2, 1])/sum(conf)
+traimc; testmc
+```
+```{r}
+summary(fit.poly)
+```
+446 support vectors, evenly distributed.
+
+#### (h)
+*Overall, which approach seems to give the best results on this data?*
+This time, linear and radial had the same test set missclassification rate but radial had a lower training missclassification rate.
+
