@@ -1,0 +1,216 @@
+---
+title: "Tilastollinen Oppimisen Jatkokurssi Round 5"
+output: html_notebook
+---
+
+## Exercise 1
+*ISLR 6.9: In this exercise, we will predict the number of applications received using the other variables in the College data set.*
+
+#### (a)
+*Split the data set into a training set and a test set.*
+
+Using the same splits as for Round 1.
+```{r}
+library(ISLR)
+College
+N = 777
+K = 155 
+set.seed(777)
+test = sample(seq(N), K, replace=FALSE)
+train=seq(N)[-test]
+```
+
+#### (e)
+*Fit a PCR model on the training set, with M chosen by crossvalidation. Report the test error obtained, along with the value of M selected by cross-validation*
+
+```{r}
+library(pls)
+pcr.fit = pcr(Apps ~ ., data = College[train, ], scale=TRUE, validation="CV")
+summary(pcr.fit); validationplot(pcr.fit, val.type="MSEP")
+```
+
+The best Cross-validation error is when M = 17 e.g. using reglar least squares regression. There is howeever a sharp bend at M = 2 and the value at M = 5 is almost the same as for M = 15. Let's check both.
+
+```{r}
+pcr.2.pred = predict(pcr.fit, newdata = College[test, ], ncomp = 2)
+pcr.5.pred = predict(pcr.fit, newdata = College[test, ], ncomp = 5)
+pcr.17.pred = predict(pcr.fit, newdata = College[test, ], ncomp = 17)
+mean((pcr.2.pred - College[test, "Apps"])^2); mean((pcr.5.pred - College[test, "Apps"])^2); mean((pcr.17.pred - College[test, "Apps"])^2)
+```
+
+#### (f)
+*Fit a PLS model on the training set, with M chosen by crossvalidation. Report the test error obtained, along with the value of M selected by cross-validation.*
+
+```{r}
+library(pls)
+plsr.fit = plsr(Apps ~ ., data = College[train, ], scale=TRUE, validation="CV")
+summary(plsr.fit); validationplot(plsr.fit, val.type="MSEP")
+```
+
+Here M = 11 is chosen by cross-validation. M = 2 is also a good candidate because the effect of increasing M is diminished after M = 2. Testing both we get:
+```{r}
+plsr.2.pred = predict(plsr.fit, newdata = College[test, ], ncomp = 2)
+plsr.11.pred = predict(plsr.fit, newdata = College[test, ], ncomp = 11)
+mean((plsr.2.pred - College[test, "Apps"])^2); mean((plsr.11.pred - College[test, "Apps"])^2)
+```
+
+Comparing to Round 1's results:
+OLS: 1932994
+Ridge: 1933104
+Lasso: 1934333
+
+It seems like the Lasso model gives the simplest model with the best test-error (two variables are left out, test-error similar to the lowest test error, 1932994 for OLS). The PCR-model performed very poorly (except for with M = 17 but this is the same as normal OLS) while the PLSR model performed reasonably well.
+
+## Exercise 2
+*ISLR 6.11: We will now try to predict per capita crime rate in the Boston data set. Now using PCR.*
+
+#### (a)
+*Try out some of the regression methods explored in this chapter, such as best subset selection, the lasso, ridge regression, and PCR. Present and discuss results for the approaches that you consider.*
+
+Loading data and splitting into training- and test-sets
+```{r}
+library(MASS)
+Boston
+N = 506
+K = 101
+set.seed(777)
+test = sample(seq(N), K, replace=FALSE)
+train=seq(N)[-test]
+```
+
+Fitting a PCR model with M chosen by cross-validation
+```{r}
+library(pls)
+crime.fit = pcr(crim ~ ., data = Boston[train, ], scale=TRUE, validation="CV")
+summary(crime.fit); validationplot(crime.fit, val.type="MSEP")
+```
+Setting M = 4 seems to yield a local minimum in cross-validation error. The full model (OLS) performs the best. Another alternative could be setting M = 8 or M = 1 (will probably not perform well).
+
+#### (b)
+*Propose a model (or set of models) that seem to perform well on this data set, and justify your answer. Make sure that you are evaluating model performance using validation set error, crossvalidation, or some other reasonable alternative, as opposed to using training error.*
+
+Let's check M = 1, M = 4, M = 8 and M = 13.
+```{r}
+crime.1.pred = predict(crime.fit, newdata = Boston[test, ], ncomp = 1)
+crime.4.pred = predict(crime.fit, newdata = Boston[test, ], ncomp = 4)
+crime.8.pred = predict(crime.fit, newdata = Boston[test, ], ncomp = 8)
+crime.13.pred = predict(crime.fit, newdata = Boston[test, ], ncomp = 13)
+mean((crime.1.pred - Boston[test, "crim"])^2); mean((crime.4.pred - Boston[test, "crim"])^2); mean((crime.8.pred - Boston[test, "crim"])^2); mean((crime.13.pred - Boston[test, "crim"])^2);
+```
+Based on test-set error the full model (OLS) performs the best. This was also to be expected from the earlier cross-validation.
+
+#### (c)
+*Does your chosen model involve all of the features in the data set? Why or why not?*
+
+Yes, it is equal to standard OLS.
+
+## Exercise 3
+*ISLR 10.3: . In this problem, you will perform K-means clustering manually, with K = 2, on a small example with n = 6 observations and p = 2 features. The observations are as follows.*
+Obs.  X1  X2
+1     1   4
+2     1   3
+3     0   4
+4     5   1
+5     6   2
+6     4   0
+
+#### (a)
+*Plot the observations.*
+
+```{r}
+plot(x = c(1, 1, 0, 5, 6, 4), y = c(4, 3, 4, 1, 2, 0))
+```
+
+#### (b)
+*Randomly assign a cluster label to each observation. You can use the sample() command in R to do this. Report the cluster labels for each observation.*
+
+```{r}
+sample(c(0,1), size = 6, replace = TRUE)
+```
+Obs.  Cluster
+1     1
+2     0
+3     1
+4     1
+5     0
+6     0
+
+#### (c)
+*Compute the centroid for each cluster.*
+
+```{r}
+x = c(1, 1, 0, 5, 6, 4)
+y = c(4, 3, 4, 1, 2, 0)
+cluster0 = c(2, 5, 6)
+cluster1 = c(1, 3, 4)
+centroidx0 = mean(x[cluster0])
+centroidy0 = mean(y[cluster0])
+centroidx1 = mean(x[cluster1])
+centroidy1 = mean(y[cluster1])
+centroid0 = c(centroidx0, centroidy0)
+centroid1 = c(centroidx1, centroidy1)
+centroid0; centroid1
+```
+
+#### (d)
+*Assign each observation to the centroid to which it is closest, in terms of Euclidean distance. Report the cluster labels for each observation.*
+
+```{r}
+for (i in 1:6) {
+  tmp1 = (x[i]-centroid0[1])^2+(y[i]-centroid0[2])^2
+  tmp2 = (x[i]-centroid1[1])^2+(y[i]-centroid1[2])^2
+  print(paste(c(tmp1, tmp2), sep = ", "))
+}
+```
+Obs.  Cluster
+1     1
+2     1
+3     1
+4     0
+5     0
+6     0
+
+#### (e)
+*Repeat (c) and (d) until the answers obtained stop changing.*
+
+```{r}
+x = c(1, 1, 0, 5, 6, 4)
+y = c(4, 3, 4, 1, 2, 0)
+cluster0 = c(4, 5, 6)
+cluster1 = c(1, 2, 3)
+centroidx0 = mean(x[cluster0])
+centroidy0 = mean(y[cluster0])
+centroidx1 = mean(x[cluster1])
+centroidy1 = mean(y[cluster1])
+centroid0 = c(centroidx0, centroidy0)
+centroid1 = c(centroidx1, centroidy1)
+for (i in 1:6) {
+  tmp1 = (x[i]-centroid0[1])^2+(y[i]-centroid0[2])^2
+  tmp2 = (x[i]-centroid1[1])^2+(y[i]-centroid1[2])^2
+  print(paste(c(tmp1, tmp2), sep = ", "))
+}
+```
+Obs.  Cluster
+1     1
+2     1
+3     1
+4     0
+5     0
+6     0
+
+Results didn't change, we are done.
+
+#### (f)
+*In your plot from (a), color the observations according to the cluster labels obtained.*
+
+```{r}
+plot(x = c(1, 1, 0), y = c(4, 3, 4), col = "red", xlim = c(0, 6), ylim = c(0, 4))
+points(x = c(5, 6, 4), y = c(1, 2, 0), col = "blue")
+```
+Cluster 0 in blue and cluster 1 in red.
+
+## Exercise 4
+*ISLR 10.9: *
+
+## Exercise 5
+*ISLR 10.10: *
