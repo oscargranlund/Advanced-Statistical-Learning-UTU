@@ -208,9 +208,3 @@ plot(x = c(1, 1, 0), y = c(4, 3, 4), col = "red", xlim = c(0, 6), ylim = c(0, 4)
 points(x = c(5, 6, 4), y = c(1, 2, 0), col = "blue")
 ```
 Cluster 0 in blue and cluster 1 in red.
-
-## Exercise 4
-*ISLR 10.9: *
-
-## Exercise 5
-*ISLR 10.10: *
