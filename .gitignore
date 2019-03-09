@@ -5,8 +5,16 @@
 *.Rproj
 Varian Data and Code
 *.lnk
-*.pdf
+/*.pdf
 *.csv
 *.txt
 *.Rt
 *.png
+Exercises/*.pdf
+Exercises/Solution 2/HMDA
+Exercises/Solution 2/Titanic
+Exercises/Solution 1/*.pdf
+*.log
+*.out
+*.aux
+*.synctex.gz
