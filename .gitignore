@@ -14,6 +14,8 @@ Exercises/*.pdf
 Exercises/Solution 2/HMDA
 Exercises/Solution 2/Titanic
 Exercises/Solution 1/*.pdf
+Exercises/Solution 3/*.pdf
+Exercises/Solution 4/*.pdf
 *.log
 *.out
 *.aux
