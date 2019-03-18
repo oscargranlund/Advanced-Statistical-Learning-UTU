@@ -1,8 +1,9 @@
 % !TeX spellcheck = en_GB
 \documentclass[a4paper, 12pt]{scrartcl}
-
 \setkomafont{title}{\rmfamily}
 \addtokomafont{disposition}{\rmfamily}
+
+%\documentclass[a4paper, 12pt]{article}
 
 \usepackage[english]{babel}
 \usepackage[T1]{fontenc}
@@ -30,6 +31,21 @@
 
 \newmdenv[backgroundcolor=, linecolor=White]{algorithm}
 
+\newcommand{\cov}{\operatorname{\mathbb{C}ov}}
+\newcommand{\ex}{\operatorname{\mathbb{E}}}
+\newcommand{\bfw}{\mathbf{w}}
+\newcommand{\bfX}{\mathbf{X}}
+\newcommand{\bfY}{\mathbf{Y}}
+\newcommand{\bfZ}{\mathbf{Z}}
+\newcommand{\bfmX}{\mathbf{m}_\bfX}
+\newcommand{\bfmY}{\mathbf{m}_\bfY}
+\newcommand{\bfmhX}{\mathbf{m}_{h\left(\bfX\right)}}
+\newcommand{\bfmhY}{\mathbf{m}_{h\left(\bfY\right)}}
+\newcommand{\ltwo}[1]{\left\| #1 \right\|_2}
+\newcommand{\innertwo}[2]{\left\langle #1, #2 \right\rangle_2}
+\newcommand{\inner}[2]{\left\langle #1, #2 \right\rangle}
+\newcommand{\bfalpha}{\boldsymbol{\alpha}}
+
 
 %opening
 \title{{\Large \textbf{TILM3592\\Advanced Statistical Learning}}\\
@@ -42,10 +58,174 @@
 
 \maketitle
 
+\section{Introduction}
+This paper will try to explain the generalization of linear discriminant analysis to a nonlinear, kernelized version. Focus is perhaps not put as much on the classification as on the dimension-reduction part, focusing perhaps more on kernelizing Fisher's linear discriminant analysis so that the resulting projection can be used as a basis for a classifier. It was partly inspired by exercise 12.10, \emph{Kernels and linear discriminant analysis}, in \cite{ESL}.
 
-\section{Linear Discriminant Analysis}
 
-\section{Introducing Kernels}
+\section{(Fisher) Linear Discriminant Analysis}
+Consider trying to classify two classes by separating them using a hyperplane, similar to the (linear, soft or hard margin) support vector machine or the logistic regression algorithm. Another approach could be to represent the two classes using their means and covariances. The problem could then take the form of finding a projection of the data such that the spread between the two classes (means) is maximized while the spread within the groups is minimized. This can be likened to principal components analysis where one instead tries to find a projection that maximizes the spread and we will see that this approach is similar in some ways.
 
+To make the previous more concrete, let $\bfX$ be a $\left(p \times 1\right)$ random vector and $\bfw$ be a $\left(p \times 1\right)$ vector representing a linear combination, then consider the covariance and mean of the random variable $\bfw^\intercal\bfX$, $\cov\left(\bfw^\intercal\bfX,\bfw^\intercal\bfX\right)$ and $\ex\left(\bfw^\intercal\bfX\right).$
+Since the expectation operator is linear we know that $\ex\left(\bfw^\intercal\bfX\right) = \bfw^\intercal\ex\left(\bfX\right)$ and since
+\begin{equation*}
+\cov\left(\bfX, \bfX\right):=\ex\left[\left(\bfX-\ex\left[\bfX\right]\right)\left(\bfX-\ex\left[\bfX\right]\right)^\intercal\right]=\Sigma_{\bfX \bfX},
+\end{equation*}
+we get
+\begin{align*}
+\underline{\cov\left(\bfw^\intercal\bfX, \bfw^\intercal\bfX\right)}&=\ex\left[\left(\bfw^\intercal\bfX-\ex\left[\bfw^\intercal\bfX\right]\right)\left(\bfw^\intercal\bfX-\ex\left[\bfw^\intercal\bfX\right]\right)^\intercal\right]\\
+&=\ex\left[\left(\bfw^\intercal\bfX-\bfw^\intercal\ex\left[\bfX\right]\right)\left(\bfw^\intercal\bfX-\bfw^\intercal\ex\left[\bfX\right]\right)^\intercal\right]\\
+&=\ex\left[\bfw^\intercal\left(\bfX-\ex\left[\bfX\right]\right)\left(\bfX-\ex\left[\bfX\right]\right)^\intercal\bfw\right]\\
+&=\bfw^\intercal\ex\left[\left(\bfX-\ex\left[\bfX\right]\right)\left(\bfX-\ex\left[\bfX\right]\right)^\intercal\right]\bfw=\underline{\bfw^\intercal\Sigma_{\bfX \bfX}\bfw}.
+\end{align*}
+
+Just as a sanity check, since $\bfX$ is $\left(p\times 1\right)$ we know that $\cov\left(\bfX, \bfX \right)$ is a $\left(p\times p\right)$ matrix and since $\bfw^\intercal$ is $\left(1\times p\right)$ the random variable $\bfw^\intercal\bfX$ is $\left(1 \times 1\right)$ (scalar) the covariance (variance) $\cov\left(\bfw^\intercal\bfX, \bfw^\intercal\bfX\right)$ also has to be scalar. This is true since $\bfw^\intercal\Sigma_{\bfX \bfX}\bfw$ is a $\left(1\times p\right)$ vector times a $\left(p\times p\right)$ matrix times a $\left(p\times 1\right)$ vector. Thus the result is a $\left(1\times 1\right)$ vector or a scalar which is what we were hoping for.
+
+For the spread of the means or the distance between the means we can look at the quantity $\ltwo{\ex\left(\bfw^\intercal\bfX\right)-\ex\left(\bfw^\intercal\bfY\right)}$ where $\bfX$ are the random vectors in class 1 and $\bfY$ are the random vectors in class 2. The squared distance $\ltwo{\ex\left(\bfw^\intercal\bfX\right)-\ex\left(\bfw^\intercal\bfY\right)}^2$ can be written as
+\begin{align*}
+\underline{\ltwo{\ex\left(\bfw^\intercal\bfX\right)-\ex\left(\bfw^\intercal\bfY\right)}^2}&=\inner{\ex\left(\bfw^\intercal\bfX\right)-\ex\left(\bfw^\intercal\bfY\right)}{\ex\left(\bfw^\intercal\bfX\right)-\ex\left(\bfw^\intercal\bfY\right)}\\
+&=\left(\ex\left[\bfw^\intercal\bfX\right]-\ex\left[\bfw^\intercal\bfY\right]\right)^\intercal\left(\ex\left[\bfw^\intercal\bfX\right]-\ex\left[\bfw^\intercal\bfY\right]\right)\\
+&= \left(\bfw^\intercal\ex\left[\bfX\right]-\bfw^\intercal\ex\left[\bfY\right]\right)^\intercal\left(\bfw^\intercal\ex\left[\bfX\right]-\bfw^\intercal\ex\left[\bfY\right]\right)\\
+&= \left(\ex\left[\bfX\right]-\ex\left[\bfY\right]\right)^\intercal\bfw\bfw^\intercal\left(\ex\left[\bfX\right]-\ex\left[\bfY\right]\right)
+\intertext{which is a $\left(1\times 1\right)$ vector so its transpose is the same as itself, so}
+&=\bfw^\intercal\left(\ex\left[\bfX\right]-\ex\left[\bfY\right]\right)\left(\ex\left[\bfX\right]-\ex\left[\bfY\right]\right)^\intercal\bfw=\underline{\bfw^\intercal S_{\bfX\bfY}\bfw}.
+\end{align*}
+
+%Here the $\left(p\times p\right)$ matrix $S_{\bfX\bfY}$ can be seen as a part of the covariance between $\bfX$ and $\bfY$, since
+%\begin{align*}
+%\cov\left(\bfX, \bfY\right)&=\ex\left[\left(\bfX-\ex\left[\bfX\right]\right)\left(\bfY-\ex\left[\bfY\right]\right)^\intercal\right]\\&=\ex \left[\bfX\bfY^\intercal - \ex\left(\bfX\right)\bfY^\intercal-\bfX\ex\left(\bfY\right)^\intercal + \ex\left( \bfX\right)\ex\left(\bfY\right)^\intercal\right]
+%\end{align*}
+
+Since we want to maximize the distance between the projected means while minimizing the covariances of the projected variances this means we want to maximize $\bfw^\intercal S_{\bfX\bfY}\bfw$ while minimizing $\bfw^\intercal\Sigma_{\bfX \bfX}\bfw + \bfw^\intercal\Sigma_{\bfY \bfY}\bfw = \bfw^\intercal\left(\Sigma_{\bfX \bfX}+\Sigma_{\bfY \bfY}\right)\bfw$ with respect to $\bfw$. There are two natural ways to do this; either we can maximize the (generalized Rayleigh) quotient $\frac{\bfw^\intercal S_{\bfX\bfY}\bfw}{\bfw^\intercal\left(\Sigma_{\bfX \bfX}+\Sigma_{\bfY \bfY}\right)\bfw}$ or we can maximize the difference $\bfw^\intercal S_{\bfX\bfY}\bfw-\bfw^\intercal\left(\Sigma_{\bfX \bfX}+\Sigma_{\bfY \bfY}\right)\bfw.$ We will soon see that these two are equivalent in some way but first we need to add a condition to the optimization problem so that it is well defined:
+Consider the first optimization problem. For a given $\bfw$ notice that stretching it by the scalar $a$ won't have an impact on the value of the objective function $\frac{\bfw^\intercal S_{\bfX\bfY}\bfw}{\bfw^\intercal\left(\Sigma_{\bfX \bfX}+\Sigma_{\bfY \bfY}\right)\bfw}$ since $\frac{a\bfw^\intercal S_{\bfX\bfY}a\bfw}{a\bfw^\intercal\left(\Sigma_{\bfX \bfX}+\Sigma_{\bfY \bfY}\right)a\bfw}=\frac{a^2\bfw^\intercal S_{\bfX\bfY}\bfw}{a^2\bfw^\intercal\left(\Sigma_{\bfX \bfX}+\Sigma_{\bfY \bfY}\right)\bfw}=\frac{\bfw^\intercal S_{\bfX\bfY}\bfw}{\bfw^\intercal\left(\Sigma_{\bfX \bfX}+\Sigma_{\bfY \bfY}\right)\bfw}$. Thus only the direction of the vector $\bfw$ matters and we can add the condition $\bfw^\intercal\left(\Sigma_{\bfX \bfX}+\Sigma_{\bfY \bfY}\right)\bfw=1$, fixing the denominator at the same time.
+
+%Consider the first optimization problem. There exists matrices $\Sigma_{\bfX \bfX}+\Sigma_{\bfY \bfY}$ and $S_{\bfX\bfY}$, and a vector $\bfw$ such that $\bfw^\intercal S_{\bfX\bfY}\bfw$ grows faster than $\bfw^\intercal\left(\Sigma_{\bfX \bfX}+\Sigma_{\bfY \bfY}\right)\bfw$ when the length (not direction) of $\bfw$ is changed, thus the maximization problem is unbounded. By adding the condition $\bfw^\intercal\left(\Sigma_{\bfX \bfX}+\Sigma_{\bfY \bfY}\right)\bfw=1$ we can ensure that we only look for some direction of $\bfw$ where the separation of the projected means is maximized and the variances of the projected classes are minimized.
+
+The optimization problem that is ultimately solved is then the following:
+\begin{equation}\label{opt:p}
+\begin{aligned}
+	\operatornamewithlimits{\mathrm{max}}_{\bfw}& & &\bfw^\intercal S_{\bfX\bfY}\bfw\\
+	\text{such that}& & &\bfw^\intercal\left(\Sigma_{\bfX \bfX}+\Sigma_{\bfY \bfY}\right)\bfw=1.
+\end{aligned}
+\end{equation}
+This is readily solved using the Lagrange multiplier method. The Lagrangian is given by $\mathcal{L}(\bfw, \lambda)=\bfw^\intercal S_{\bfX\bfY}\bfw - \lambda\left( \bfw^\intercal\left(\Sigma_{\bfX \bfX}+\Sigma_{\bfY \bfY}\right)\bfw - 1\right)$ with the derivative
+\begin{equation*}
+\frac{\mathrm{d}\mathcal{L}\left(\bfw, \lambda\right)}{\mathrm{d}\bfw}=2S_{\bfX \bfY}\bfw - 2\lambda \left(\Sigma_{\bfX \bfX}+\Sigma_{\bfY \bfY}\right)\bfw.
+\end{equation*}
+For $\lambda=1$ this is the same derivative as the derivative of the second optimization problem considered (with the difference between the projected spread and variances). Setting the derivative equal to zero gives the following relation:
+\begin{equation*}
+	S_{\bfX \bfY}\bfw = \lambda \left(\Sigma_{\bfX \bfX}+\Sigma_{\bfY \bfY}\right)\bfw.
+\end{equation*}
+This is called a generalized eigenvalue problem which can be changed into a regular eigenvector problem if $\left(\Sigma_{\bfX \bfX}+\Sigma_{\bfY \bfY}\right)$ is non-singular. If this is the case then we can make further progress.
+
+Since $S_{\bfX \bfY}$ is a product of two vectors it has rank 1 (the basis is one of the vectors and the weights are given by the other vector). Thus the result of the matrix multiplication $\left(\Sigma_{\bfX \bfX}+\Sigma_{\bfY \bfY}\right)^{-1}S_{\bfX \bfY}$ also has at most rank 1 and thus has at most one eigenvalue not equal to one. The solution to the optimization problem is then the eigenvector of the matrix $\left(\Sigma_{\bfX \bfX}+\Sigma_{\bfY \bfY}\right)^{-1}S_{\bfX \bfY}$.
+
+The algorithm usually referred to as linear discriminant analysis can be seen as first finding this projection and then choosing a point on the one-dimensional projection to use as the threshold for classification. This can be done by assuming things about the distribution of the data, for example assuming that the two classes are normally distributed around separate means but with the same covariance matrix. Using the assumptions and incorporating weighting based on the number of observations in each class one can determine a threshold such that the resulting classification is equivalent to the ``normal'' linear discriminant analysis algorithm.
+
+\section{A note on the solution}
+Usually, the covariance and distance matrices $\Sigma_{\bfX \bfX},$ $\Sigma_{\bfY \bfY}$ and $S_{\bfX\bfY}$ are unknown and thus need to be estimated from some observed data. In other words the matrices depend on the observed data and one can even see that they lie in the space spanned by the observations in some sense.
+
+Consider the maximum likelihood estimate of the expected value of class one ($\ex\left(\bfX\right)$) which is equal to \begin{equation*}
+\bfmX:=\frac{1}{N_\bfX}\sum_{i=1}^{N_\bfX}\bfX_i
+\end{equation*} which is a linear combination of the $N_\bfX$ observations $\bfX_i$ and thus lies in the span of the observations. The analogous is true for $\bfmY$, the maximum likelihood estimate of the expected value of class 2.
+
+The covariances can be estimated as 
+\begin{align*}
+	\hat{\Sigma}_{\bfX \bfX}&:=\frac{1}{N_\bfX}\sum_{i=1}^{N_\bfX}\left(\bfX_i-\bfmX\right)\left(\bfX_i-\bfmX\right)^\intercal\hspace{2em}\text{and}\\
+	\hat{\Sigma}_{\bfY \bfY}&:=\frac{1}{N_\bfY}\sum_{i=1}^{N_\bfY}\left(\bfY_i-\bfmY\right)\left(\bfY_i-\bfmY\right)^\intercal,
+	\intertext{and the distance between the means as}
+	\hat{S}_{\bfX\bfY}&:=\left(\bfmX - \bfmY\right)\left(\bfmX - \bfmY\right)^\intercal.
+\end{align*}%$\hat{\Sigma}_{\bfX \bfX}:=\frac{1}{N_\bfX}\sum_{i=1}^{N_\bfX}\left(\bfX_i-\bfmX\right)\left(\bfX_i-\bfmX\right)^\intercal$ and $\hat{\Sigma}_{\bfY \bfY}:=\frac{1}{N_\bfY}\sum_{i=1}^{N_\bfY}\left(\bfY_i-\bfmY\right)\left(\bfY_i-\bfmY\right)^\intercal$ and the distance between the means as $\hat{S}_{\bfX\bfY}:=\left(\bfmX - \bfmY\right)\left(\bfmX - \bfmY\right)^\intercal$.
+All three of these are matrices where the rows/columns are linear combinations of the observations $\bfX_i$ and $\bfY_i$.
+
+For the solution to the optimization problem, the eigenvector, the same has to be true, i.e. the eigenvector has to be some linear combination of the observations. In other words,\begin{align*}\bfw &= \sum_{i=1}^{N_\bfX}\alpha_{\bfX_i}\bfX_i + \sum_{i=1}^{N_\bfY}\alpha_{\bfY_i}\bfY_i \intertext{or, by defining $\bfZ$ as the matrix containing all $N_\bfX + N_\bfY=N$ observations, }&= \sum_{i=1}^{N}\alpha_i\bfZ_i.\end{align*}
+
+Consider now a (possibly non-linear) transformation $h:\mathbb{R}^p\longmapsto\mathbb{R}^P$. Suppose we wish to apply the (Fisher) linear discriminant analysis algorithm to this transformed dataset. Defining the vectors %$\bfmhX:=\frac{1}{N_\bfX}\sum_{i=1}^{N_\bfX}h\left(\bfX_i\right)$ and $\bfmhY:=\frac{1}{N_\bfY}\sum_{i=1}^{N_\bfY}h\left(\bfY_i\right)$ as well as the matrices
+\begin{align*}
+	\bfmhX&:=\frac{1}{N_\bfX}\sum_{i=1}^{N_\bfX}h\left(\bfX_i\right) \hspace{2em}\text{and}\\
+	\bfmhY&:=\frac{1}{N_\bfY}\sum_{i=1}^{N_\bfY}h\left(\bfY_i\right),
+	\intertext{as well as the matrices}
+	\hat{\Sigma}_{h\left(\bfX\right)h\left(\bfX\right)}&:=\frac{1}{N_\bfX}\sum_{i=1}^{N_\bfX}\left(h\left(\bfX_i\right)-\bfmhX\right)\left(h\left(\bfX_i\right)-\bfmhX\right)^\intercal,\\
+	\hat{\Sigma}_{h\left(\bfY\right)h\left(\bfY\right)}&:=\frac{1}{N_\bfY}\sum_{i=1}^{N_\bfY}\left(h\left(\bfY_i\right)-\bfmhY\right)\left(h\left(\bfY_i\right)-\bfmhY\right)^\intercal\hspace{2em}\text{and}\\
+	\hat{S}_{h\left(\bfX\right)h\left(\bfY\right)}&:=\left(\bfmhX - \bfmhY\right)\left(\bfmhX - \bfmhY\right)^\intercal
+\end{align*}
+we can try solving the optimization problem
+\begin{equation}\label{opt:h}
+\begin{aligned}
+\operatornamewithlimits{\mathrm{max}}_{\bfw}& & &\bfw^\intercal \hat{S}_{h\left(\bfX\right)h\left(\bfY\right)}\bfw\\
+\text{such that}& & &\bfw^\intercal\left(\hat{\Sigma}_{h\left(\bfX\right) h\left(\bfX\right)}+\hat{\Sigma}_{h\left(\bfY\right) h\left(\bfY\right)}\right)\bfw=1,
+\end{aligned}
+\end{equation}
+where $\bfw$ is now a $\left(1\times P \right)$ vector. If $P$ is large this might be difficult, especially if $P>N$ since the matrix $\left(\hat{\Sigma}_{h\left(\bfX\right) h\left(\bfX\right)}+\hat{\Sigma}_{h\left(\bfY\right) h\left(\bfY\right)}\right)=:W_h$ will be singular and a similar approach as the solution to (\ref{opt:p}) would not work.
+
+However, what we do know is that if there is a solution $\bfw$, it has to be of the form \begin{equation*}
+\bfw=\sum_{i=1}^{N}\alpha_i h\left(\bfZ_i\right).
+\end{equation*}
+The linear combination of the observed transformed average, $\bfw^\intercal\bfmhX$, then has to have the form
+\begin{align*}
+	\bfw^\intercal\bfmhX&=\frac{1}{N_\bfX}\bfw^\intercal\sum_{i=1}^{N_\bfX}h\left(\bfX_i\right)=\frac{1}{N_\bfX}\sum_{j=1}^{N}\alpha_j h\left(\bfZ_j\right)^\intercal\sum_{i=1}^{N_\bfX}h\left(\bfX_i\right)\\
+	&=\frac{1}{N_\bfX}\sum_{j=1}^{N}\sum_{i=1}^{N_\bfX}\alpha_j h\left(\bfZ_j\right)^\intercal h\left(\bfX_i\right)=\frac{1}{N_\bfX}\sum_{j=1}^{N}\sum_{i=1}^{N_\bfX}\alpha_j \inner{h\left(\bfZ_j\right)}{h\left(\bfX_i\right)}.
+\end{align*}
+At this point we recognize the inner product between two high-dimensional vectors, $\inner{h\left(\bfZ_j\right)}{h\left(\bfX_i\right)}$, and realize that this can be computed using kernels.
+
+\section{Reformulating Fishers Linear Discriminant using Kernels}
+Kernels are functions that efficiently compute inner products in some high-dimensional (even infinite-dimensional) space. An advantage with using kernels is that when we have some mapping $h$ to a higher dimensional space, the kernel doesn't need to explicitly compute the mapping but instead it implicitly computes in a high-dimensional space (given that the mapping $h$ is such that it gives rise to a kernel). One can also go the other way around and fix a kernel that then determines what mapping one is working in. In general, kernels can always be used instead of inner products.
+
+Continuing with the manipulation of $\bfw^\intercal\bfmhX$, the inner product $\inner{h\left(\bfZ_j\right)}{h\left(\bfX_i\right)}$ can be replaced by a suitable kernel $k\left(\bfZ_j, \bfX_i\right)$, meaning that
+\begin{align*}
+	\underline{\bfw^\intercal\bfmhX} &= \frac{1}{N_\bfX}\sum_{j=1}^{N}\sum_{i=1}^{N_\bfX}\alpha_j k\left(\bfZ_j, \bfX_i\right)
+	\intertext{which can be seen as the multiplication}
+	&=\underline{\bfalpha^\intercal\mathbf{M}_\bfX},
+\end{align*}
+where $\bfalpha$ is an $\left(1\times N\right)$ vector of the scalars $\alpha_j$, $j=1,\dots,N$ and $\mathbf{M}_\bfX$ is the $\left(1\times N\right)$ vector of the scalars $\frac{1}{N_\bfX}\sum_{i=1}^{N_\bfX}k\left(\bfZ_j,\bfX_i\right)$, $j=1,\dots,N$. Similarly we get that $\bfw^\intercal\bfmhY=\bfalpha^\intercal\mathbf{M}_\bfY.$% or $\left(\bfw^\intercal\bfmhY\right)^\intercal=\bfmhY^\intercal\bfw=\mathbf{M}_\bfY^\intercal\bfalpha$.
+
+The spread between the two transformed and projected means is then given by
+\begin{align*}
+\underline{\ltwo{\bfw^\intercal\bfmhX-\bfw^\intercal\bfmhY}^2} &= \ltwo{\bfalpha^\intercal\mathbf{M}_\bfX - \bfalpha^\intercal\mathbf{M}_\bfY}^2=\inner{\bfalpha^\intercal\mathbf{M}_\bfX - \bfalpha^\intercal\mathbf{M}_\bfY}{\bfalpha^\intercal\mathbf{M}_\bfX - \bfalpha^\intercal\mathbf{M}_\bfY}\\
+&=\left(\bfalpha^\intercal\mathbf{M}_\bfX - \bfalpha^\intercal\mathbf{M}_\bfY\right)^\intercal\left(\bfalpha^\intercal\mathbf{M}_\bfX - \bfalpha^\intercal\mathbf{M}_\bfY\right)\\
+&=\left(\mathbf{M}_\bfX - \mathbf{M}_\bfY\right)^\intercal\bfalpha\bfalpha^\intercal\left(\mathbf{M}_\bfX - \mathbf{M}_\bfY\right)\\
+&=\bfalpha^\intercal\left(\mathbf{M}_\bfX - \mathbf{M}_\bfY\right)\left(\mathbf{M}_\bfX - \mathbf{M}_\bfY\right)^\intercal\bfalpha = \underline{\bfalpha^\intercal S_k\bfalpha},
+\end{align*}
+this is the same calculation as the one performed for the original space and $S_k$ is the $\left(N\times N\right)$ matrix defined as $S_k:=\left(\mathbf{M}_\bfX - \mathbf{M}_\bfY\right)\left(\mathbf{M}_\bfX - \mathbf{M}_\bfY\right)^\intercal$.
+
+For the covariance/variance within the groups we first need to take a look at the projection of a transformed variable,
+\begin{align*}
+\underline{\bfw^\intercal h\left(\bfX\right)} &= \sum_{j=1}^{N}\alpha_j h\left(\bfZ_j\right)^\intercal h\left(\bfX\right)=\sum_{j=1}^{N}\alpha_j \inner{h\left(\bfZ_j\right)}{h\left(\bfX\right)}\\
+&=\sum_{j=1}^{N}\alpha_j k\left(\bfZ_j, \bfX\right)=\underline{\bfalpha^\intercal \mathbf{K}_\bfX}.
+\end{align*}
+The covariance $\underline{\cov\left(\bfw^\intercal h\left(\bfX\right), \bfw^\intercal h\left(\bfX\right)\right)}$ is then estimated by
+\begin{align*}
+	&\frac{1}{N_x}\sum_{i=1}^{N_x}\left(\left(\bfw^\intercal h\left(\bfX_i\right)-\bfw^\intercal\bfmhX\right)\left(\bfw^\intercal h\left(\bfX_i\right)-\bfw^\intercal\bfmhX\right)^\intercal\right)\hspace{2em}\\
+	&=\frac{1}{N_x} \sum_{i=1}^{N_x}\left( \left(\bfalpha^\intercal \mathbf{K}_{\bfX_i} - \bfalpha^\intercal \mathbf{M}_\bfX\right) \left(\bfalpha^\intercal \mathbf{K}_{\bfX_i} - \bfalpha^\intercal \mathbf{M}_\bfX\right)^\intercal \right)\\
+	&=\frac{1}{N_x} \sum_{i=1}^{N_x}\left( \bfalpha^\intercal\left(\mathbf{K}_{\bfX_i} - \mathbf{M}_\bfX\right) \left(\mathbf{K}_{\bfX_i} - \mathbf{M}_\bfX\right)^\intercal\bfalpha \right)\\
+	&=\bfalpha^\intercal\left(\frac{1}{N_\bfX}\sum_{i=1}^{N_\bfX}\left(\mathbf{K}_{\bfX_i} - \mathbf{M}_\bfX\right)\left(\mathbf{K}_{\bfX_i} - \mathbf{M}_\bfX\right)^\intercal\right)\bfalpha=\underline{\bfalpha^\intercal \Sigma_{k\bfX}\bfalpha}
+\end{align*}
+and similarly for class $\bfY$ we get the estimate $\bfalpha^\intercal\Sigma_{k\bfY}\bfalpha$, where the $\left(N \times N\right)$ matrix describes the average observed distances from the transformed mean of the observations and is given by $\Sigma_{k\bfY}:=\left(\frac{1}{N_\bfY}\sum_{i=1}^{N_\bfY}\left(\mathbf{K}_{\bfY_i} - \mathbf{M}_\bfY\right)\left(\mathbf{K}_{\bfY_i} - \mathbf{M}_\bfY\right)^\intercal\right)$ (there might be more efficient ways to compute this). The two covariances can be summed, we define this as the matrix $W_k:=\Sigma_{k\bfX}+\Sigma_{k\bfY}$.
+
+In this way we have transformed the optimization problem (\ref{opt:h}) into the following optimization problem:
+\begin{equation}\label{opt:k}
+\begin{aligned}
+\operatornamewithlimits{\mathrm{max}}_{\bfalpha}& & &\bfalpha^\intercal S_k\bfalpha\\
+\text{such that}& & &\bfalpha^\intercal W_k\bfalpha=1,
+\end{aligned}
+\end{equation}
+a problem where we already know that the solution $\bfalpha$ is given by the only eigenvector of the matrix $W_k^{-1}S_k$.
+
+The projection of a new observation $\bfX$ is given by $\bfw^\intercal h\left(\bfX\right)=\bfalpha \mathbf{K}_\bfX$. The kernel $k$ or the non-linear transformation $h$ should be chosen using cross-validation. Classification can be done in the projected space using almost any classification method.
+
+\subsection{Some notes}
+In general, the matrix $W_k$ might not be invertible according to $\cite{Mika}$ since $N$ dimensional covariances are estimated using $N$ observations. The authors suggest replacing $W_k$ by $W_\gamma=W_k+\gamma I$ where $I$ is the $\left(N\times N\right)$ identity matrix. For a sufficiently large $\gamma$, the resulting matrix will be invertible. This also has the benefit of having a regularizing effect, which is good since the high-dimensional space that the kernel allows for might lead to overfitting.
+
+For the binary classification problem one can solve for the direction of the eigenvector by noting that $\bfalpha\propto W_k^{-1}\left(\mathbf{M}_\bfX-\mathbf{M}_\bfY\right)$. Once the direction is known the magnitude does not really matter.
+
+The method can be extended to multiple-classes and then gives as many egienvectors or directions/projections as the number of classes minus 1. Then the estimation of the covariance matrices can be troublesome since all the combinations of the classes have to be taken into account.
+
+\section{Conclusion}
+Three optimization problems were presented and two of them solved in order to explain how the dimensionality reduction step of the linear discriminant classifier can be generalized to a kernelized version. The main steps were to formulate an optimization problem so that the resulting solution is pleasing, then to solve the optimization problem using Lagrange multipliers and to recognize the generalized eigenvalue problem. After the original problem is solved some knowledge of linear algebra and reproducing kernels is used to rework the problem into one where the data is only present in inner products so that they can be switched for kernels. After this one can implicitly work in infinite-dimensional spaces to get a good projection that can be used for classification.
+
+\begin{thebibliography}{2}
+	\bibitem{Mika} S. Mika, G. Rätsch, J. Weston, B. Schölkopf and K.-R. Müller, \emph{Fisher Discriminant Analysis With Kernels.} Neural Networks for Signal Processing IX: Proceedings of the 1999 IEEE Signal Processing Society Workshop, 1999.
+	
+	\bibitem{ESL} T. Hastie, R. Tibshirani and  J. Friedman, \emph{The Elements of Statistical Learning: Data Mining, Inference, and Prediction.} Springer, Second Edition, 2009.
+\end{thebibliography}
 
 \end{document}
