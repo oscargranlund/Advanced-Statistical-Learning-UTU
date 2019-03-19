@@ -28,57 +28,122 @@
 \usepackage[dvipsnames]{xcolor}
 \usepackage{mdframed}
 
-\newmdenv[backgroundcolor=, linecolor=White]{algorithm}
+\definecolor{light-gray}{gray}{0.975}
+
+
+\newmdenv[backgroundcolor=light-gray, linecolor=White, leftmargin=-0.25\paperwidth+0.5\linewidth, rightmargin=-0.25\paperwidth+0.5\linewidth, innerleftmargin=0.25\paperwidth-0.5\linewidth, innerrightmargin=0.25\paperwidth-0.5\linewidth]{algorithm}
+
+% leftmargin=-10pt, rightmargin=-10pt]{algorithm}
+
+\usepackage{tablefootnote} 
+\makeatletter 
+\AfterEndEnvironment{mdframed}{%
+	\tfn@tablefootnoteprintout% 
+	\gdef\tfn@fnt{0}% 
+}
+
+\newcommand{\bfbeta}{\boldsymbol{\beta}}
 
 
 %opening
-\title{{\Large \textbf{TILM3592\\Advanced Statistical Learning}}\\{\LARGE \bfseries Learning Diary}}
+\title{\vspace{0.7cm}{\Large \textbf{TILM3592\\Advanced Statistical Learning}}\\{\LARGE \bfseries Learning Diary}}
 \author{{\large NAME}\\
 { MATR.}}
 \date{}
 
 \begin{document}
-
 \maketitle
 
 
-\section{Linear Model Selection and Regularization (Shrinkage)}
+\section{Linear Model Selection and Regularization, Shrinkage}
 
 The objective is to find a good (``best'') model of the form
 \begin{equation}\label{eq:fulllinearmodel}
 	\mathbf{y}=\beta_0+\beta_1\mathbf{x}_1+\ldots+\beta_p\mathbf{x}_p.
 \end{equation}
-One possible solution would be to just use all of the predictors, this would minimize the sum of the squared residuals on the training set but would not necessarily give a model that generalizes as well as a simpler model. This phenomenon is called overfitting, the model overfits to the training data and performs worse than a simpler model. Overfitting is often caused by using a model that is too complex. For example if we have a training set containing $N$ samples of $p$ predictors we could extend the number of predictors until the number of predictors $p'$ is equal to $N$, using some suitable method of extending (for example by constructing suitable polynomials of the initial predictors). Using all $p'$ of the predictors we would then be able to perfectly fit the training set but performance on the validation set would be awful.
+One possible solution would be to just use all of the predictors, this would minimize the sum of the squared residuals on the training set but would not necessarily give a model that generalizes as well as a simpler model.
+This phenomenon is called overfitting, the model overfits to the training data and performs worse than a simpler model.
+Overfitting is often caused by using a model that is too complex.
+For example if we have a training set containing $N$ samples of $p$ predictors we could extend the number of predictors until the number of predictors $p'$ is equal to $N$, using some suitable method of extending (for example by constructing suitable polynomials of the initial predictors).
+Using all $p'$ of the predictors we would then be able to perfectly fit the training set but performance on the validation set would be awful.
 
-In order to find a model that generalizes well we instead look for a restriction of the model (\ref{eq:fulllinearmodel}) that performs well on a hold out set/test set/validation set. The restriction can be chosen in many ways, for example we could simply choose the best subset of the predictors.
+In order to find a model that generalizes well we instead look for a restriction of the model (\ref{eq:fulllinearmodel}) that performs well on a hold out set/test set/validation set.
+The restriction can be chosen in many ways, for example we could simply choose the best subset of the predictors.
 
-\subsection{Best Subset Selection}
-For $k=1,\ldots,p$ fit all the ${p \choose k}$ models with $k$ predictors. For each $k$ choose the model $\mathcal{M}_k$ that performs the best, here the best model can be defined as lowest $R^2$ since all the models have the same number of predictors \footnote{Why not use lowest cross-validation error here too? Perhaps for computational reasons or if no validation set exists.}. In the end choose the final model by looking at some measure that take into account the complexity of the model (how many predictors were used, $k$) or just using the cross-validation error (either the one predicted using $k$-fold cross-validation or just the performance on a hold-out set). There are a couple of regularly used measures that take into account the complexity of the model, for example the Akaike and Bayesian Information Criteria, Mallow's $C_p$ or the adjusted $R^2$-statistic.
+%\newpage
+\subsubsection*{Best Subset Selection}
+\begin{algorithm}
+For $k=1,\ldots,p$ fit all the ${p \choose k}$ models with $k$ predictors.
+For each $k$ choose the model $\mathcal{M}_k$ that performs the best, here the best model can be defined as lowest $R^2$ since all the models have the same number of predictors \tablefootnote{Why not use lowest cross-validation error here too? Perhaps for computational reasons or if no validation set exists.}.
+In the end choose the final model by looking at some measure that take into account the complexity of the model (how many predictors were used, $k$) or just using the cross-validation error (either the one predicted using $k$-fold cross-validation or just the performance on a hold-out set).
+There are a couple of regularly used measures that take into account the complexity of the model, for example the Akaike and Bayesian Information Criteria, Mallow's $C_p$ or the adjusted $R^2$-statistic.
+\end{algorithm}
 
-This method is computationally very expensive if the number of predictors $p$ is large. This can be seen by looking at the sum of the binomial coefficients, $\sum_{k=0}^{p}{p \choose k}$ which equals $2^p$. Thus $2^p$ models need to be fit and evaluated before we arrive at a final model. There are other methods that also perform well (but they might not find the best model) with smaller algorithmic complexity.
+This method is computationally very expensive if the number of predictors $p$ is large.
+This can be seen by looking at the sum of the binomial coefficients, $\sum_{k=0}^{p}{p \choose k}$ which equals $2^p$.
+Thus $2^p$ models need to be fit and evaluated before we arrive at a final model.
+There are other methods that also perform well (but they might not find the best model) with smaller algorithmic complexity.
 
 \subsection{Stepwise Selection}
-Instead of considering all $2^p$ of the models that the best subset selection  algorithm does the following algorithms only consider $p(p+1)/2+1$ models, drastically cutting down on the amount of needed work. For both of the following algorithms this is done by iteratively starting with some model and modifying it.
+Instead of considering all $2^p$ of the models that the best subset selection  algorithm does the following algorithms only consider $p(p+1)/2+1$ models, drastically cutting down on the amount of needed work.
+For both of the following algorithms this is done by iteratively starting with some model and modifying it.
 
-\begin{mdframed}[backgroundcolor=Goldenrod, linecolor=White]
-\subsubsection{Forward Stepwise Selection}
-Forward stepwise selection starts with $\mathcal{M}_0$ which is the model containing only the intercept term. The next model, $\mathcal{M}_1$, is selected by considering the $p$ models we get by including each of the $p$ predictors left separately. The best of these models is the one with lowest $R^2$ and is denoted with $\mathcal{M}_1$. This process of selecting one predictor to add to the model at each step is repeated until the model contains all predictors ($p$ times). The selection fo the final model is similar to the final model selection of the best subset selection algorithm, using some criteria that takes model complexity into account.
 
-At step $k=1,\ldots,p$ we need to fit and evaluate $p-(k-1)$ models. The total number of models evaluated is then
+\subsubsection*{Forward Stepwise Selection}
+\begin{algorithm}
+Forward stepwise selection starts with $\mathcal{M}_0$ which is the model containing only the intercept term.
+The next model, $\mathcal{M}_1$, is selected by considering the $p$ models we get by including each of the $p$ predictors left separately.
+The best of these models is the one with lowest $R^2$ and is denoted with $\mathcal{M}_1$.
+This process of selecting one predictor to add to the model at each step is repeated until the model contains all predictors ($p$ times).
+The selection fo the final model is similar to the final model selection of the best subset selection algorithm, using some criteria that takes model complexity into account.
+
+At step $k=1,\ldots,p$ we need to fit and evaluate $p-(k-1)$ models.
+The total number of models evaluated is then
 \begin{equation*}
 \sum_{k=1}^{p} \left(p-(k-1)\right) + 1=1+\sum_{k=1}^{p} k = p(p+1)/2+1,
 \end{equation*}
 where the final $+1$ term is for fitting the $\mathcal{M}_0$ model.
-\end{mdframed}
+\end{algorithm}
 
-\begin{mdframed}[backgroundcolor=Goldenrod, linecolor=White]
-\subsubsection{Backwards Stepwise Selection}
-In contrast to forwards stepwise selection backwards stepwise selection is when we start with the full model, $\mathcal{M}_p$, and remove one predictor at each step to iteratively get the models $\mathcal{M}_{p-1},\mathcal{M}_{p-2},\ldots,\mathcal{M}_0$. The selection of a final model is again the same as for best subset selection and the analysis of complexity is the same as for forwards stepwise selection.
-\end{mdframed}
+%\begin{mdframed}[backgroundcolor=Goldenrod, linecolor=White]
 
-An important thing to note is that stepwise selection does not necessarily give the same model as best subset selection (in other words, not the always best model). This is because once a predictor is included/dropped we can not choose to drop/reinclude it at a later point even though that might be advantageous.
+\subsubsection*{Backwards Stepwise Selection}
+\begin{algorithm}
+In contrast to forwards stepwise selection backwards stepwise selection is when we start with the full model, $\mathcal{M}_p$, and remove one predictor at each step to iteratively get the models $\mathcal{M}_{p-1},\mathcal{M}_{p-2},\ldots,\mathcal{M}_0$.
+The selection of a final model is again the same as for best subset selection and the analysis of complexity is the same as for forwards stepwise selection.
+\end{algorithm}
+
+An important thing to note is that stepwise selection does not necessarily give the same model as best subset selection (in other words, not always the best model).
+This is because once a predictor is included/dropped we can not choose to drop/reinclude it at a later point even though that might be advantageous.
 
 There are also other ways of doing forwards and backwards stepwise selection, for instance we can choose to use the $F$-statistic to evaluate what predictors to include/drop.
 
+\subsection{Regularization, Shrinkage}
+Another approach is to modify the loss-functions used in ordinary linear regression.
+Often this is done by adding some kind of penalty to the loss-function, e.g. instead of solving
+\begin{equation*}
+	\operatornamewithlimits{argmin}_{\bfbeta}\left( \sum_{i=1}^{N}\left(y_i-\bfbeta^\intercal \mathbf{x}_i\right)^2\right)
+\end{equation*}
+we solve
+\begin{equation*}
+	\operatornamewithlimits{argmin}_{\bfbeta}\left( \sum_{i=1}^{N}\left(y_i-\bfbeta^\intercal \mathbf{x}_i\right)^2+\text{penalty}\right)
+\end{equation*}
+where the penalty often is some function of the coefficients that biases the algorithm towards a simpler model.
+
+\subsubsection*{Ridge Regression}
+\begin{algorithm}
+Penalize the coefficients by choosing $\lambda\left\|\bfbeta\right\|^2$ as the penalty function.
+The optimization problem to be solved is then
+\begin{equation*} \hat{\bfbeta}^\mathrm{r}=\operatornamewithlimits{argmin}_{\bfbeta}\left( \sum_{i=1}^{N}\left(y_i-\bfbeta^\intercal \mathbf{x}_i\right)^2+\lambda\left\|\bfbeta\right\|^2\right),
+\end{equation*}
+where $\lambda$ is a positive real-valued (tuning) parameter.
+The solution is given by
+\begin{equation*}
+	\hat{\bfbeta}^\mathrm{r}=\left(\mathbf{X}^\intercal\mathbf{X}+\lambda\mathbf{I}\right)^{-1}\mathbf{X}^\intercal\mathbf{y}
+\end{equation*}
+where $\mathbf{X}$ is the $\left(N\times p\right)$ matrix containing all the observations.
+
+
+\end{algorithm}
 
 \end{document}
