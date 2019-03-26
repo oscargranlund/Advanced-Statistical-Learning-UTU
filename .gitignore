@@ -20,4 +20,4 @@ Exercises/Solution 4/*.pdf
 *.out
 *.aux
 *.synctex.gz
-Learning Diary/./ipynb_checkpoints/
+Learning Diary/.ipynb_checkpoints/

@@ -122,11 +122,11 @@ There are also other ways of doing forwards and backwards stepwise selection, fo
 Another approach is to modify the loss-functions used in ordinary linear regression.
 Often this is done by adding some kind of penalty to the loss-function, e.g. instead of solving
 \begin{equation*}
-	\operatornamewithlimits{argmin}_{\bfbeta}\left( \sum_{i=1}^{N}\left(y_i-\bfbeta^\intercal \mathbf{x}_i\right)^2\right)
+	\operatornamewithlimits{argmin}_{\bfbeta}\left( \sum_{i=1}^{N}\left(y_i-\beta_0-\mathbf{x}_i^\intercal\bfbeta \right)^2\right)
 \end{equation*}
 we solve
 \begin{equation*}
-	\operatornamewithlimits{argmin}_{\bfbeta}\left( \sum_{i=1}^{N}\left(y_i-\bfbeta^\intercal \mathbf{x}_i\right)^2+\text{penalty}\right)
+	\operatornamewithlimits{argmin}_{\bfbeta}\left( \sum_{i=1}^{N}\left(y_i-\beta_0-\mathbf{x}_i^\intercal\bfbeta\right)^2+\text{penalty}\right)
 \end{equation*}
 where the penalty often is some function of the coefficients that biases the algorithm towards a simpler model.
 
@@ -134,16 +134,47 @@ where the penalty often is some function of the coefficients that biases the alg
 \begin{algorithm}
 Penalize the coefficients by choosing $\lambda\left\|\bfbeta\right\|^2$ as the penalty function.
 The optimization problem to be solved is then
-\begin{equation*} \hat{\bfbeta}^\mathrm{r}=\operatornamewithlimits{argmin}_{\bfbeta}\left( \sum_{i=1}^{N}\left(y_i-\bfbeta^\intercal \mathbf{x}_i\right)^2+\lambda\left\|\bfbeta\right\|^2\right),
+\begin{equation*} \hat{\bfbeta}^\mathrm{r}=\operatornamewithlimits{argmin}_{\bfbeta}\left( \sum_{i=1}^{N}\left(y_i-\beta_0-\mathbf{x}_i^\intercal\bfbeta\right)^2+\lambda\left\|\bfbeta\right\|^2_2\right),
 \end{equation*}
-where $\lambda$ is a positive real-valued (tuning) parameter.
+where $\lambda$ is a positive real-valued (tuning) parameter chosen by cross-validation.
 The solution is given by
 \begin{equation*}
 	\hat{\bfbeta}^\mathrm{r}=\left(\mathbf{X}^\intercal\mathbf{X}+\lambda\mathbf{I}\right)^{-1}\mathbf{X}^\intercal\mathbf{y}
 \end{equation*}
 where $\mathbf{X}$ is the $\left(N\times p\right)$ matrix containing all the observations.
-
-
 \end{algorithm}
+
+%TODO In practice SVD is useful for solving? PCs?
+
+\subsubsection*{Lasso Regression}
+\begin{algorithm}
+Instead of penalizing the regular euclidean (2-) norm of the coefficient $\bfbeta$ we penalize the 1-norm of $\bfbeta$.
+The optimization problem is then of the form
+\begin{equation}\label{eq:lasso}
+	\bfbeta^\mathrm{l}=\operatornamewithlimits{argmin}_{\bfbeta}\left(\sum_{i=1}^{N}\left(y_i-\beta_0-\mathbf{x}_i^\intercal\bfbeta\right)^2+\lambda\left\|\bfbeta\right\|_1\right)
+\end{equation}
+with no analytical solution.
+Since no analytical solution exists many efficient methods of numerically solving the optimization problem have been developed, many based on techniques in optimization theory and convex analysis.
+Here $\lambda$ is also a tuning parameter determined using cross-validation.
+\end{algorithm}
+
+Analysing the role of the $\lambda$-parameter a bit more we discover that if we try to use Lagrange multipliers to solve the following optimization problem
+\begin{equation*}
+	\begin{aligned}
+	\operatornamewithlimits{argmin}_{\bfbeta} & & &\left(\sum_{i=1}^{N}\left(y_i-\beta_0-\mathbf{x}_i^\intercal\bfbeta\right)^2\right)\\
+	\text{subject to} & & & \left\|\bfbeta\right\|_1 \leq t
+	\end{aligned}
+\end{equation*}
+we recover the optimization problem (\ref{eq:lasso}) solved in Lasso regression (up to some constants that do not matter when solving for stationary points of the Lagrange function).
+There is then a one-to-one correspondence between the parameters $\lambda$ and $t$ and solving either problem is the same as solving the other problem for some particular combination of parameters.
+
+The interpretation is that the coefficient $\bfbeta$ is confined to the 1-sphere (a square standing on one corner in 2 dimensions) with radius $t$.
+Figure \ref{fig:lassopenalty} illustrates how this can have the effect of selecting variables by choosing $\bfbeta^\mathrm{l}$ such that some coordinates are equal to 0, meaning that some covariates are left outside of the final model.
+
+For ridge regression the same can be done but here the result is that the coefficients are restricted to the regular (Euclidean) 2-sphere (a circle in 2 dimensions).
+This does not in general have the effect of selecting variables, which can be seen in figure \ref{fig:ridgepenalty}.
+
+\subsection{title}
+
 
 \end{document}
