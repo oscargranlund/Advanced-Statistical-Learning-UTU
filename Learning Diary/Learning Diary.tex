@@ -174,6 +174,24 @@ Figure \ref{fig:lassopenalty} illustrates how this can have the effect of select
 For ridge regression the same can be done but here the result is that the coefficients are restricted to the regular (Euclidean) 2-sphere (a circle in 2 dimensions).
 This does not in general have the effect of selecting variables, which can be seen in figure \ref{fig:ridgepenalty}.
 
+\begin{figure}[hb]
+	\begin{subfigure}{.5\textwidth}
+		\centering
+		\includegraphics[width=.8\linewidth, clip, trim={10mm 10mm 10mm 10mm}]{Figure1.pdf}
+		\label{fig:lassopenalty}
+		\caption{Result of Lasso regression with $t=1$.}
+	\end{subfigure}
+	\begin{subfigure}{.5\textwidth}
+		\centering
+		\includegraphics[width=.8\linewidth, clip, trim={10mm 10mm 10mm 10mm}]{Figure2.pdf}
+		\label{fig:ridgepenalty}
+		\caption{Result of ridge regression with $t=1$.}
+	\end{subfigure}
+	\caption{Figures illustrating the effect of the variables $t$ and $\lambda$ on the optimal values. The coefficient chosen by ordinary least squares is indicated by $\bfbeta^\mathrm{ls}$ with Lasso and ridge regression coefficients indicated by $\bfbeta^\mathrm{l}$ and $\bfbeta^\mathrm{r}$. The contours are the error (lines) and penalty (grey) parts of the loss function.}
+\label{fig:fig}
+\end{figure}
+
+
 \subsection{title}
 
 
