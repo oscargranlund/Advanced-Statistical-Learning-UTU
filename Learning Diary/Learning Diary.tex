@@ -194,7 +194,22 @@ This does not in general have the effect of selecting variables, which can be se
 \end{figure}
 
 
-\subsection{title}
+\subsection{Linear models utilising dimensionality reduction}
+\subsubsection*{Principal Components Analysis}
+The aim is to represent the data using fewer components or dimension while losing as little information as possible. In the linear case, this can be done efficiently if the resulting components are pairwise orthogonal.
+\begin{algorithm}
+	The new components are defined as orthogonal linear combinations of the original data. The optimization problem to be solved is
+	\begin{equation*}
+	\begin{aligned}
+		\operatornamewithlimits{argmin}_{\mu, \lambda_i, V_q} & & &\sum_{i=1}^{N}\left\|\mathbf{x}_i-\boldsymbol{\mu}-V_p\lambda_i\right\|\\
+		\text{subject to} & & & V_q\text{ is an orthogonal matrix}.
+	\end{aligned}
+	\end{equation*}
+	By setting $\hat{\boldsymbol{\mu}} = \hat{\mathbf{x}}$
+\end{algorithm}
+
+ 
+
 
 
 \end{document}
