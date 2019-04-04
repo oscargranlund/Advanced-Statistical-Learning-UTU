@@ -43,6 +43,8 @@
 }
 
 \newcommand{\bfbeta}{\boldsymbol{\beta}}
+\newcommand{\bflambda}{\boldsymbol{\lambda}}
+\newcommand{\bfmu}{\boldsymbol{\mu}}
 
 
 %opening
@@ -195,21 +197,29 @@ This does not in general have the effect of selecting variables, which can be se
 
 
 \subsection{Linear models utilising dimensionality reduction}
+First we acquaint ourselves with a common method for dimensionality reduction.
 \subsubsection*{Principal Components Analysis}
-The aim is to represent the data using fewer components or dimension while losing as little information as possible. In the linear case, this can be done efficiently if the resulting components are pairwise orthogonal.
+The aim is to represent the data using fewer components or dimension while losing as little information as possible. In the linear case, this can be done efficiently if the resulting components are pairwise orthogonal. In other words, the approach is to model the observations as the rank-$q$ linear model $f(\bflambda)=\bfmu + \mathbf{V}_q\bflambda$ where $\bflambda$ are coordinates in a $q$-dimensional space, $\bfmu$ is the location of the $p$-dimensional mean and $\mathbf{V}_q$ is a $\left(q\times p\right)$-dimensional matrix with $q$ orthonormal vectors as columns. This is an affine hyperplane of rank $q$.
 \begin{algorithm}
-	The new components are defined as orthogonal linear combinations of the original data. The optimization problem to be solved is
+	We try to minimize the \emph{reconstruction error}:
 	\begin{equation*}
 	\begin{aligned}
-		\operatornamewithlimits{argmin}_{\mu, \lambda_i, V_q} & & &\sum_{i=1}^{N}\left\|\mathbf{x}_i-\boldsymbol{\mu}-V_p\lambda_i\right\|\\
-		\text{subject to} & & & V_q\text{ is an orthogonal matrix}.
+		\operatornamewithlimits{argmin}_{\bfmu, \bflambda_i, \mathbf{V}_q} & & &\sum_{i=1}^{N}\left\|\mathbf{x}_i-\bfmu-\mathbf{V}_q\bflambda_i\right\|^2.
 	\end{aligned}
 	\end{equation*}
-	By setting $\hat{\boldsymbol{\mu}} = \hat{\mathbf{x}}$
+	By partially optimizing for $\boldsymbol{\mu}$ and $\bflambda_i$ we get $\hat{\boldsymbol{\mu}} = \bar{\mathbf{x}}$ and $\hat{\bflambda}_i=\mathbf{V}_q^\intercal \left(\mathbf{x}_i-\bar{\mathbf{x}}\right)$.
+	Assuming the data is centred ($\bar{\mathbf{x}}=\mathbf{0}$) we are left with determining $\mathbf{V}_q$:
+	\begin{equation*}
+	\begin{aligned}
+	\operatornamewithlimits{argmin}_{\mathbf{V}_q} & & &\sum_{i=1}^{N}\left\|\mathbf{x}_i-\mathbf{V}_q\mathbf{V}_q^\intercal\mathbf{x}_i\right\|^2.
+	\end{aligned}
+	\end{equation*}
+	The solution can be constructed using the singular value decomposition $\mathbf{U}\mathbf{D}\mathbf{V}^\intercal$ of the data $\mathbf{X}$. Here $\mathbf{U}$ is a $\left(N\times p\right)$ orthogonal matrix, $\mathbf{D}$ is a $\left(p\times p\right)$ diagonal matrix with the eigenvalues of $\mathbf{X}$ on the diagonal ordered by size and $\mathbf{V}^\intercal$ is a $\left(p\times p\right)$ orthogonal matrix. The solution $\mathbf{V}_q$ for a given $q\leq p$ is given by the first $q$ columns of $\mathbf{V}$. Similarly the new reduced space is given by the first $q$ columns of $\mathbf{U}\mathbf{D}$.
+	
+	The interpretation is that we have projected the original space down on the first $q$ \emph{principal components} of the data. We also have a way to reconstruct the original data using the matrix $\mathbf{V}_q$.
 \end{algorithm}
 
- 
+Principal components analysis also has a couple of other interpretations and properties. For example the eigenvalues can be interpreted as the variance explained by a particular principal component. The total variance is then given by the sum of all the eigenvalues and the ratio of variance explained to total variance is the ratio between the sum of the $q$ largest eigenvalues to the sum of all the eigenvalues. Normally the decomposition is constructed for all $p$ principal components and a plot of the ratio of variance explained to total variance for each $q$ is used to determine when to stop. Usually there is a sharp drop of in additional explaining power after a couple of principal components, at that point it is no longer efficient (in the interest of interpretability) to include more dimensions.
 
-
-
+The process can be thought of as projecting the data on some axis such that the variance measured along that axis is maximized, then projecting on an axis orthogonal to the first axis such that the variance is again maximized. This can be repeated $p$ times (given that all measurements are ), at the $p-1$:th time there is only one direction left.
 \end{document}
