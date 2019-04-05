@@ -45,7 +45,11 @@
 \newcommand{\bfbeta}{\boldsymbol{\beta}}
 \newcommand{\bflambda}{\boldsymbol{\lambda}}
 \newcommand{\bfmu}{\boldsymbol{\mu}}
-
+\newcommand{\bfalpha}{\boldsymbol{\alpha}}
+\newcommand{\bfx}{\mathbf{x}}
+\newcommand{\inner}[2]{\left\langle #1, #2 \right\rangle}
+\newcommand{\var}{\operatorname{\mathbb{V}ar}}
+\newcommand{\ex}{\operatorname{\mathbb{E}}}
 
 %opening
 \title{\vspace{0.7cm}{\Large \textbf{TILM3592\\Advanced Statistical Learning}}\\{\LARGE \bfseries Learning Diary}}
@@ -61,7 +65,7 @@
 
 The objective is to find a good (``best'') model of the form
 \begin{equation}\label{eq:fulllinearmodel}
-	\mathbf{y}=\beta_0+\beta_1\mathbf{x}_1+\ldots+\beta_p\mathbf{x}_p.
+	\mathbf{y}=\beta_0+\beta_1\bfx_1+\ldots+\beta_p\bfx_p.
 \end{equation}
 One possible solution would be to just use all of the predictors, this would minimize the sum of the squared residuals on the training set but would not necessarily give a model that generalizes as well as a simpler model.
 This phenomenon is called overfitting, the model overfits to the training data and performs worse than a simpler model.
@@ -124,11 +128,11 @@ There are also other ways of doing forwards and backwards stepwise selection, fo
 Another approach is to modify the loss-functions used in ordinary linear regression.
 Often this is done by adding some kind of penalty to the loss-function, e.g. instead of solving
 \begin{equation*}
-	\operatornamewithlimits{argmin}_{\bfbeta}\left( \sum_{i=1}^{N}\left(y_i-\beta_0-\mathbf{x}_i^\intercal\bfbeta \right)^2\right)
+	\operatornamewithlimits{argmin}_{\bfbeta}\left( \sum_{i=1}^{N}\left(y_i-\beta_0-\bfx_i^\intercal\bfbeta \right)^2\right)
 \end{equation*}
 we solve
 \begin{equation*}
-	\operatornamewithlimits{argmin}_{\bfbeta}\left( \sum_{i=1}^{N}\left(y_i-\beta_0-\mathbf{x}_i^\intercal\bfbeta\right)^2+\text{penalty}\right)
+	\operatornamewithlimits{argmin}_{\bfbeta}\left( \sum_{i=1}^{N}\left(y_i-\beta_0-\bfx_i^\intercal\bfbeta\right)^2+\text{penalty}\right)
 \end{equation*}
 where the penalty often is some function of the coefficients that biases the algorithm towards a simpler model.
 
@@ -136,7 +140,7 @@ where the penalty often is some function of the coefficients that biases the alg
 \begin{algorithm}
 Penalize the coefficients by choosing $\lambda\left\|\bfbeta\right\|^2$ as the penalty function.
 The optimization problem to be solved is then
-\begin{equation*} \hat{\bfbeta}^\mathrm{r}=\operatornamewithlimits{argmin}_{\bfbeta}\left( \sum_{i=1}^{N}\left(y_i-\beta_0-\mathbf{x}_i^\intercal\bfbeta\right)^2+\lambda\left\|\bfbeta\right\|^2_2\right),
+\begin{equation*} \hat{\bfbeta}^\mathrm{r}=\operatornamewithlimits{argmin}_{\bfbeta}\left( \sum_{i=1}^{N}\left(y_i-\beta_0-\bfx_i^\intercal\bfbeta\right)^2+\lambda\left\|\bfbeta\right\|^2_2\right),
 \end{equation*}
 where $\lambda$ is a positive real-valued (tuning) parameter chosen by cross-validation.
 The solution is given by
@@ -153,7 +157,7 @@ where $\mathbf{X}$ is the $\left(N\times p\right)$ matrix containing all the obs
 Instead of penalizing the regular euclidean (2-) norm of the coefficient $\bfbeta$ we penalize the 1-norm of $\bfbeta$.
 The optimization problem is then of the form
 \begin{equation}\label{eq:lasso}
-	\bfbeta^\mathrm{l}=\operatornamewithlimits{argmin}_{\bfbeta}\left(\sum_{i=1}^{N}\left(y_i-\beta_0-\mathbf{x}_i^\intercal\bfbeta\right)^2+\lambda\left\|\bfbeta\right\|_1\right)
+	\bfbeta^\mathrm{l}=\operatornamewithlimits{argmin}_{\bfbeta}\left(\sum_{i=1}^{N}\left(y_i-\beta_0-\bfx_i^\intercal\bfbeta\right)^2+\lambda\left\|\bfbeta\right\|_1\right)
 \end{equation}
 with no analytical solution.
 Since no analytical solution exists many efficient methods of numerically solving the optimization problem have been developed, many based on techniques in optimization theory and convex analysis.
@@ -163,7 +167,7 @@ Here $\lambda$ is also a tuning parameter determined using cross-validation.
 Analysing the role of the $\lambda$-parameter a bit more we discover that if we try to use Lagrange multipliers to solve the following optimization problem
 \begin{equation*}
 	\begin{aligned}
-	\operatornamewithlimits{argmin}_{\bfbeta} & & &\left(\sum_{i=1}^{N}\left(y_i-\beta_0-\mathbf{x}_i^\intercal\bfbeta\right)^2\right)\\
+	\operatornamewithlimits{argmin}_{\bfbeta} & & &\left(\sum_{i=1}^{N}\left(y_i-\beta_0-\bfx_i^\intercal\bfbeta\right)^2\right)\\
 	\text{subject to} & & & \left\|\bfbeta\right\|_1 \leq t
 	\end{aligned}
 \end{equation*}
@@ -176,7 +180,7 @@ Figure \ref{fig:lassopenalty} illustrates how this can have the effect of select
 For ridge regression the same can be done but here the result is that the coefficients are restricted to the regular (Euclidean) 2-sphere (a circle in 2 dimensions).
 This does not in general have the effect of selecting variables, which can be seen in figure \ref{fig:ridgepenalty}.
 
-\begin{figure}[hb]
+\begin{figure}[h]
 	\begin{subfigure}{.5\textwidth}
 		\centering
 		\includegraphics[width=.8\linewidth, clip, trim={10mm 10mm 10mm 10mm}]{Figure1.pdf}
@@ -198,28 +202,90 @@ This does not in general have the effect of selecting variables, which can be se
 
 \subsection{Linear models utilising dimensionality reduction}
 First we acquaint ourselves with a common method for dimensionality reduction.
+The idea when doing dimensionality reduction is to represent the data in a less complex way without losing too much information.
+For example we can try to represent the data in a new coordinate system with a smaller dimension than before while keeping as much of the variance in the model as possible.
+
 \subsubsection*{Principal Components Analysis}
-The aim is to represent the data using fewer components or dimension while losing as little information as possible. In the linear case, this can be done efficiently if the resulting components are pairwise orthogonal. In other words, the approach is to model the observations as the rank-$q$ linear model $f(\bflambda)=\bfmu + \mathbf{V}_q\bflambda$ where $\bflambda$ are coordinates in a $q$-dimensional space, $\bfmu$ is the location of the $p$-dimensional mean and $\mathbf{V}_q$ is a $\left(q\times p\right)$-dimensional matrix with $q$ orthonormal vectors as columns. This is an affine hyperplane of rank $q$.
+Principal components analysis is when the idea above is implemented so that we first try to find a vector $\mathbf{v}_1$ to project the new data on such that the variance of the projection is maximized.
+The variance of a random variable is defined as $\var\left(\bfx\right):=\ex\left[\left(\bfx-\bfmu\right)^\intercal\left(\bfx-\bfmu\right)\right]=\ex\left(\inner{\bfx-\bfmu}{\bfx-\bfmu}\right)$ and if the random variable is centred so that the mean is equal to $\mathbf{0}$ this is equal to just $\ex\left(\bfx^\intercal\bfx\right)=\ex\left(\inner{\bfx}{\bfx}\right)$.
+The projection of a random variable $\bfx$ on a vector $\mathbf{v}$ is equal to $\frac{\inner{\bfx}{\mathbf{v}}\mathbf{v}}{\left\|\mathbf{v}\right\|^2}$ where the scalar $\frac{\inner{\bfx}{\mathbf{v}}}{\left\|\mathbf{v}\right\|}$ says how far along the unit vector $\frac{\mathbf{v}}{\left\|\mathbf{v}\right\|}$ we should travel so that the random variable $\bfx$ is as close as possible.
+Since all the projections will be lying on the vector $\mathbf{v}$ it is enough to take the difference between the scalars $\frac{\inner{\bfx}{\mathbf{v}}}{\left\|\mathbf{v}\right\|}$ when calculating the variance.
+The variance of the projection is then equal to:
+\begin{equation*}
+	\var\left(\frac{\inner{\bfx}{\mathbf{v}}}{\left\|\mathbf{v}\right\|}\right)=\ex\left[\left(\frac{\inner{\bfx}{\mathbf{v}}}{\left\|\mathbf{v}\right\|}\right)^\intercal\left(\frac{\inner{\bfx}{\mathbf{v}}}{\left\|\mathbf{v}\right\|}\right)\right]=\ex\left[\frac{\left(\bfx^\intercal\mathbf{v}\right)^\intercal\left(\bfx^\intercal\mathbf{v}\right)}{\left\|\mathbf{v}\right\|^2}\right]=\ex\left[\frac{\mathbf{v}^\intercal\bfx\bfx^\intercal\mathbf{v}}{\mathbf{v}^\intercal\mathbf{v}}\right].
+\end{equation*}
+Using $N$ samples $\bfx_1,\dots,\bfx_N$ this can be estimated by summing over the result of the previous calculation for each sample and dividing by the number of samples but since the number of samples is fixed we can ignore this step.
+This can also be expressed in matrix notation by stacking the samples $\bfx_i$ as rows in $\mathbf{X}$.
+The sum is then represented by the quantity
+\begin{equation*}
+	\frac{\mathbf{v}^\intercal\mathbf{X}^\intercal\mathbf{X}\mathbf{v}}{\mathbf{v}^\intercal\mathbf{v}}.
+\end{equation*}
+
+Finding a vector $\mathbf{v}$ that maximizes the variance of a random variable $\bfx$ projected upon it is then equal to solving the following optimization problem:
+\begin{equation*}
+\begin{aligned}
+	\operatornamewithlimits{argmax}_{\mathbf{v}_1} & & &\frac{\mathbf{v}_1^\intercal\mathbf{X}^\intercal\mathbf{X}\mathbf{v}_1}{\mathbf{v}_1^\intercal\mathbf{v}_1}.
+\end{aligned}
+\end{equation*}
+Scaling the vector $\mathbf{v}$ does not change the value of the objective function here so we can add the constraint $\left\|\mathbf{v}\right\|=1$ to get a unique solution. The optimization problem is then
+\begin{equation*}
+\begin{aligned}
+\operatornamewithlimits{argmax}_{\mathbf{v}_1} & & &\mathbf{v}_1^\intercal\mathbf{X}^\intercal\mathbf{X}\mathbf{v}_1\\
+\text{subject to} & & &\left\|\mathbf{v}\right\|=1
+\end{aligned}
+\end{equation*}
+with the Lagrange function
+	$\mathcal{L}\left(\mathbf{v}_1, \lambda_1\right)=\mathbf{v}_1^\intercal\mathbf{X}^\intercal\mathbf{X}\mathbf{v}_1-\lambda_1\left(\mathbf{v}_1^\intercal\mathbf{v}_1-1\right)$.
+Stationary points are found by solving for points where the derivative $\frac{\mathrm{d}\mathcal{L}}{\mathrm{d}\mathbf{v}_1}=2\mathbf{v}_1^\intercal\mathbf{X}^\intercal\mathbf{X}-2\lambda_1\mathbf{v}_1^\intercal$ equals 0.
+This is obviously an eigenvalue problem and the solution is given by the largest eigenvalue $\lambda_1$ of the matrix $\mathbf{X}^\intercal\mathbf{X}$  with the corresponding eigenvector $\mathbf{v}_1$.
+
+The first \emph{principal component} of an observation $\bfx_i$ is what the projection $\inner{\bfx_i}{\mathbf{v}_1}\mathbf{v}_1$ is called.
+In order to find more principal components the data can be altered by subtracting the projections of the samples on the eigenvectors and then extracting a new eigenvector in a similar way.
+It turns out that first eigenvector of the new (squared) data matrix will be the second eigenvector of the original and this is starting to look a lot like some sort of eigenvector decomposition of the matrix $\mathbf{X}^\intercal\mathbf{X}$ or $\mathbf{X}$, which is the approach investigated below. 
+
+The other approach is to model the observations as the rank-$q$ linear model $f(\bflambda)=\bfmu + \mathbf{V}_q\bflambda$ where $\bflambda$ are coordinates in a $q$-dimensional space, $\bfmu$ is the location of the $p$-dimensional mean and $\mathbf{V}_q$ is a $\left(q\times p\right)$-dimensional matrix with $q$ orthonormal vectors as columns.
+This is an affine hyperplane of rank $q$.
 \begin{algorithm}
 	We try to minimize the \emph{reconstruction error}:
 	\begin{equation*}
 	\begin{aligned}
-		\operatornamewithlimits{argmin}_{\bfmu, \bflambda_i, \mathbf{V}_q} & & &\sum_{i=1}^{N}\left\|\mathbf{x}_i-\bfmu-\mathbf{V}_q\bflambda_i\right\|^2.
+		\operatornamewithlimits{argmin}_{\bfmu, \bflambda_i, \mathbf{V}_q} & & &\sum_{i=1}^{N}\left\|\bfx_i-\bfmu-\mathbf{V}_q\bflambda_i\right\|^2.
 	\end{aligned}
 	\end{equation*}
-	By partially optimizing for $\boldsymbol{\mu}$ and $\bflambda_i$ we get $\hat{\boldsymbol{\mu}} = \bar{\mathbf{x}}$ and $\hat{\bflambda}_i=\mathbf{V}_q^\intercal \left(\mathbf{x}_i-\bar{\mathbf{x}}\right)$.
-	Assuming the data is centred ($\bar{\mathbf{x}}=\mathbf{0}$) we are left with determining $\mathbf{V}_q$:
+	By partially optimizing for $\boldsymbol{\mu}$ and $\bflambda_i$ we get $\hat{\boldsymbol{\mu}} = \bar{\bfx}$ and $\hat{\bflambda}_i=\mathbf{V}_q^\intercal \left(\bfx_i-\bar{\bfx}\right)$.
+	Assuming the data is centred ($\bar{\bfx}=\mathbf{0}$) we are left with determining $\mathbf{V}_q$:
 	\begin{equation*}
 	\begin{aligned}
-	\operatornamewithlimits{argmin}_{\mathbf{V}_q} & & &\sum_{i=1}^{N}\left\|\mathbf{x}_i-\mathbf{V}_q\mathbf{V}_q^\intercal\mathbf{x}_i\right\|^2.
+	\operatornamewithlimits{argmin}_{\mathbf{V}_q} & & &\sum_{i=1}^{N}\left\|\bfx_i-\mathbf{V}_q\mathbf{V}_q^\intercal\bfx_i\right\|^2.
 	\end{aligned}
 	\end{equation*}
-	The solution can be constructed using the singular value decomposition $\mathbf{U}\mathbf{D}\mathbf{V}^\intercal$ of the data $\mathbf{X}$. Here $\mathbf{U}$ is a $\left(N\times p\right)$ orthogonal matrix, $\mathbf{D}$ is a $\left(p\times p\right)$ diagonal matrix with the eigenvalues of $\mathbf{X}$ on the diagonal ordered by size and $\mathbf{V}^\intercal$ is a $\left(p\times p\right)$ orthogonal matrix. The solution $\mathbf{V}_q$ for a given $q\leq p$ is given by the first $q$ columns of $\mathbf{V}$. Similarly the new reduced space is given by the first $q$ columns of $\mathbf{U}\mathbf{D}$.
+	The solution can be constructed using the singular value decomposition $\mathbf{U}\mathbf{D}\mathbf{V}^\intercal$ of the data $\mathbf{X}$.
+	Here $\mathbf{U}$ is a $\left(N\times p\right)$ orthogonal matrix, $\mathbf{D}$ is a $\left(p\times p\right)$ diagonal matrix with the eigenvalues of $\mathbf{X}$ on the diagonal ordered by size and $\mathbf{V}^\intercal$ is a $\left(p\times p\right)$ orthogonal matrix. The solution $\mathbf{V}_q$ for a given $q\leq p$ is given by the first $q$ columns of $\mathbf{V}$.
+	Similarly the new reduced space is given by the first $q$ columns of $\mathbf{U}\mathbf{D}$.
 	
-	The interpretation is that we have projected the original space down on the first $q$ \emph{principal components} of the data. We also have a way to reconstruct the original data using the matrix $\mathbf{V}_q$.
+	The interpretation is that we have projected the original space down on the first $q$ \emph{principal components} of the data.
+	We also have a way to reconstruct the original data using the matrix $\mathbf{V}_q$.
 \end{algorithm}
 
-Principal components analysis also has a couple of other interpretations and properties. For example the eigenvalues can be interpreted as the variance explained by a particular principal component. The total variance is then given by the sum of all the eigenvalues and the ratio of variance explained to total variance is the ratio between the sum of the $q$ largest eigenvalues to the sum of all the eigenvalues. Normally the decomposition is constructed for all $p$ principal components and a plot of the ratio of variance explained to total variance for each $q$ is used to determine when to stop. Usually there is a sharp drop of in additional explaining power after a couple of principal components, at that point it is no longer efficient (in the interest of interpretability) to include more dimensions.
+Principal components analysis also has a couple of other interpretations and properties.
+For example the eigenvalues can be interpreted as the variance explained by a particular principal component.
+The total variance is then given by the sum of all the eigenvalues and the ratio of variance explained to total variance is the ratio of the sum of the $q$ largest eigenvalues to the sum of all the eigenvalues.
+Normally the decomposition is constructed for all $p$ principal components and a plot of the ratio of variance explained to total variance for each $q$ is used to determine when to stop.
+Usually there is a sharp drop of in additional explaining power after a couple of principal components, at that point it is no longer efficient (in the interest of interpretability) to include more dimensions.
 
-The process can be thought of as projecting the data on some axis such that the variance measured along that axis is maximized, then projecting on an axis orthogonal to the first axis such that the variance is again maximized. This can be repeated $p$ times (given that all measurements are ), at the $p-1$:th time there is only one direction left.
+\subsubsection*{Principal Components Regression}
+Now that we have a method for reducing the dimensionality of our data we could try ordinary linear regression on the new dimensions.
+\begin{algorithm}
+	Principal components regression is when ordinary linear regression is ran on the first $k$ principal components calculated using PCA.
+	The principal components $\mathbf{z}_i$ are given by $\mathbf{z}_i=\mathbf{X}\mathbf{v}_i$ where $\mathbf{v}_i$ are the eigenvectors identified by PCA.
+	Stacking the principal components columnwise in an $\left(N\times k\right)$ matrix $\mathbf{Z}$ means that the ordinary least squares solution $\bfalpha^\mathrm{ls}$ to the optimization problem
+	\begin{equation*}
+	\begin{aligned}
+	\operatornamewithlimits{argmin}_{\bfalpha} & & &\left\|\mathbf{y}-\mathbf{Z}\bfalpha\right\|^2.
+	\end{aligned}
+	\end{equation*}
+	is given by $\bfalpha^\mathrm{ls}=\left(\mathbf{Z}^\intercal\mathbf{Z}\right)^{-1}\mathbf{Z}^\intercal\mathbf{y}$, here everything is assumed to be centred (also $\mathbf{y}$).
+	
+\end{algorithm}
+
 \end{document}
