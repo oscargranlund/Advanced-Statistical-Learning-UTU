@@ -174,7 +174,7 @@ Analysing the role of the $\lambda$-parameter a bit more we discover that if we 
 we recover the optimization problem (\ref{eq:lasso}) solved in Lasso regression (up to some constants that do not matter when solving for stationary points of the Lagrange function).
 There is then a one-to-one correspondence between the parameters $\lambda$ and $t$ and solving either problem is the same as solving the other problem for some particular combination of parameters.
 
-The interpretation is that the coefficient $\bfbeta$ is confined to the 1-sphere (a square standing on one corner in 2 dimensions) with radius $t$.
+The interpretation is that the coefficient $\bfbeta$ is constrained to the 1-sphere (a square standing on one corner in 2 dimensions) with radius $t$.
 Figure \ref{fig:lassopenalty} illustrates how this can have the effect of selecting variables by choosing $\bfbeta^\mathrm{l}$ such that some coordinates are equal to 0, meaning that some covariates are left outside of the final model.
 
 For ridge regression the same can be done but here the result is that the coefficients are restricted to the regular (Euclidean) 2-sphere (a circle in 2 dimensions).
@@ -285,7 +285,24 @@ Now that we have a method for reducing the dimensionality of our data we could t
 	\end{aligned}
 	\end{equation*}
 	is given by $\bfalpha^\mathrm{ls}=\left(\mathbf{Z}^\intercal\mathbf{Z}\right)^{-1}\mathbf{Z}^\intercal\mathbf{y}$, here everything is assumed to be centred (also $\mathbf{y}$).
-	
 \end{algorithm}
+
+
+Using the singular value decomposition we can also compare the least squares and ridge regression solutions.
+For least squares we get:
+\begin{align*}
+	\mathbf{X}\bfbeta^\mathrm{ls}&=\mathbf{X}\left(\mathbf{X}^\intercal\mathbf{X}\right)^{-1}\mathbf{X}^\intercal\mathbf{y}
+	=\mathbf{U}\mathbf{D}\mathbf{V}^\intercal\left(\mathbf{V}\mathbf{D}^\intercal\mathbf{U}^\intercal\mathbf{U}\mathbf{D}\mathbf{V}^\intercal\right)^{-1}\mathbf{V}\mathbf{D}^\intercal\mathbf{U}^\intercal\mathbf{y}\\
+	&=\mathbf{U}\mathbf{D}\mathbf{V}^\intercal\left(\mathbf{V}^\intercal\right)^{-1}\mathbf{D}^{-2}\mathbf{V}^{-1}\mathbf{V}\mathbf{D}\mathbf{U}^\intercal\mathbf{y}
+	=\mathbf{U}\mathbf{U}^\intercal\mathbf{y},
+\end{align*}
+while for ridge regression the result is
+\begin{align*}
+	\mathbf{X}\bfbeta^\mathrm{r}&=\mathbf{X}\left(\mathbf{X}^\intercal\mathbf{X}+\lambda\mathbf{I}\right)^{-1}\mathbf{X}^\intercal\mathbf{y}
+	=\mathbf{U}\mathbf{D}\mathbf{V}^\intercal\left(\mathbf{V}\mathbf{D}^\intercal\mathbf{U}^\intercal\mathbf{U}\mathbf{D}\mathbf{V}^\intercal+\lambda\mathbf{I}\right)^{-1}\mathbf{V}\mathbf{D}^\intercal\mathbf{U}^\intercal\mathbf{y}\\
+	&=\mathbf{U}\mathbf{D}\mathbf{V}^\intercal\left(\mathbf{V}\mathbf{D}\mathbf{D}\mathbf{V}^\intercal+\lambda\mathbf{I}\right)^{-1}\mathbf{V}\mathbf{D}^\intercal\mathbf{U}^\intercal\mathbf{y}
+	=\mathbf{U}\mathbf{D}\mathbf{V}^\intercal\left(\left(\mathbf{D}\mathbf{V}^\intercal\right)^\intercal\left(\mathbf{V}\mathbf{D}\right)^\intercal+\lambda\mathbf{I}\right)^{-1}\mathbf{V}\mathbf{D}^\intercal\mathbf{U}^\intercal\mathbf{y}
+\end{align*}
+
 
 \end{document}
