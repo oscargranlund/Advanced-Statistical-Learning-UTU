@@ -301,7 +301,8 @@ while for ridge regression the result is
 	\mathbf{X}\bfbeta^\mathrm{r}&=\mathbf{X}\left(\mathbf{X}^\intercal\mathbf{X}+\lambda\mathbf{I}\right)^{-1}\mathbf{X}^\intercal\mathbf{y}
 	=\mathbf{U}\mathbf{D}\mathbf{V}^\intercal\left(\mathbf{V}\mathbf{D}^\intercal\mathbf{U}^\intercal\mathbf{U}\mathbf{D}\mathbf{V}^\intercal+\lambda\mathbf{I}\right)^{-1}\mathbf{V}\mathbf{D}^\intercal\mathbf{U}^\intercal\mathbf{y}\\
 	&=\mathbf{U}\mathbf{D}\mathbf{V}^\intercal\left(\mathbf{V}\mathbf{D}\mathbf{D}\mathbf{V}^\intercal+\lambda\mathbf{I}\right)^{-1}\mathbf{V}\mathbf{D}^\intercal\mathbf{U}^\intercal\mathbf{y}
-	=\mathbf{U}\mathbf{D}\mathbf{V}^\intercal\left(\left(\mathbf{D}\mathbf{V}^\intercal\right)^\intercal\left(\mathbf{V}\mathbf{D}\right)^\intercal+\lambda\mathbf{I}\right)^{-1}\mathbf{V}\mathbf{D}^\intercal\mathbf{U}^\intercal\mathbf{y}
+	=\mathbf{U}\mathbf{D}\mathbf{V}^\intercal\left(\mathbf{V}\mathbf{D}\mathbf{D}\mathbf{V}^\intercal+\lambda\mathbf{V}^\intercal\mathbf{V}\right)^{-1}\mathbf{V}\mathbf{D}^\intercal\mathbf{U}^\intercal\mathbf{y}\\
+	&=\mathbf{U}\mathbf{D}\mathbf{V}^\intercal\left(\mathbf{V}\mathbf{D}\mathbf{D}\mathbf{V}^\intercal+\lambda\mathbf{V}^\intercal\mathbf{V}\right)^{-1}\mathbf{V}\mathbf{D}^\intercal\mathbf{U}^\intercal\mathbf{y}
 \end{align*}
 
 
