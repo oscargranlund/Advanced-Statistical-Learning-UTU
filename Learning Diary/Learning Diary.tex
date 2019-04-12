@@ -50,6 +50,7 @@
 \newcommand{\inner}[2]{\left\langle #1, #2 \right\rangle}
 \newcommand{\var}{\operatorname{\mathbb{V}ar}}
 \newcommand{\ex}{\operatorname{\mathbb{E}}}
+\newcommand{\cor}{\operatorname{\mathbb{C}orr}}
 
 %opening
 \title{\vspace{0.7cm}{\Large \textbf{TILM3592\\Advanced Statistical Learning}}\\{\LARGE \bfseries Learning Diary}}
@@ -288,22 +289,82 @@ Now that we have a method for reducing the dimensionality of our data we could t
 \end{algorithm}
 
 
-Using the singular value decomposition we can also compare the least squares and ridge regression solutions.
-For least squares we get:
+Having used the singular value decomposition a bit we can try to investigate the previous algorithms we have introduced, mainly by comparing ordinary least squares and ridge regression.
+For least squares the fitted values are:
 \begin{align*}
 	\mathbf{X}\bfbeta^\mathrm{ls}&=\mathbf{X}\left(\mathbf{X}^\intercal\mathbf{X}\right)^{-1}\mathbf{X}^\intercal\mathbf{y}
 	=\mathbf{U}\mathbf{D}\mathbf{V}^\intercal\left(\mathbf{V}\mathbf{D}^\intercal\mathbf{U}^\intercal\mathbf{U}\mathbf{D}\mathbf{V}^\intercal\right)^{-1}\mathbf{V}\mathbf{D}^\intercal\mathbf{U}^\intercal\mathbf{y}\\
 	&=\mathbf{U}\mathbf{D}\mathbf{V}^\intercal\left(\mathbf{V}^\intercal\right)^{-1}\mathbf{D}^{-2}\mathbf{V}^{-1}\mathbf{V}\mathbf{D}\mathbf{U}^\intercal\mathbf{y}
 	=\mathbf{U}\mathbf{U}^\intercal\mathbf{y},
 \end{align*}
-while for ridge regression the result is
+while for ridge regression we get:
 \begin{align*}
 	\mathbf{X}\bfbeta^\mathrm{r}&=\mathbf{X}\left(\mathbf{X}^\intercal\mathbf{X}+\lambda\mathbf{I}\right)^{-1}\mathbf{X}^\intercal\mathbf{y}
 	=\mathbf{U}\mathbf{D}\mathbf{V}^\intercal\left(\mathbf{V}\mathbf{D}^\intercal\mathbf{U}^\intercal\mathbf{U}\mathbf{D}\mathbf{V}^\intercal+\lambda\mathbf{I}\right)^{-1}\mathbf{V}\mathbf{D}^\intercal\mathbf{U}^\intercal\mathbf{y}\\
 	&=\mathbf{U}\mathbf{D}\mathbf{V}^\intercal\left(\mathbf{V}\mathbf{D}\mathbf{D}\mathbf{V}^\intercal+\lambda\mathbf{I}\right)^{-1}\mathbf{V}\mathbf{D}^\intercal\mathbf{U}^\intercal\mathbf{y}
-	=\mathbf{U}\mathbf{D}\mathbf{V}^\intercal\left(\mathbf{V}\mathbf{D}\mathbf{D}\mathbf{V}^\intercal+\lambda\mathbf{V}^\intercal\mathbf{V}\right)^{-1}\mathbf{V}\mathbf{D}^\intercal\mathbf{U}^\intercal\mathbf{y}\\
-	&=\mathbf{U}\mathbf{D}\mathbf{V}^\intercal\left(\mathbf{V}\mathbf{D}\mathbf{D}\mathbf{V}^\intercal+\lambda\mathbf{V}^\intercal\mathbf{V}\right)^{-1}\mathbf{V}\mathbf{D}^\intercal\mathbf{U}^\intercal\mathbf{y}
+	=\mathbf{U}\mathbf{D}\mathbf{V}^\intercal\left(\mathbf{V}\mathbf{D}\mathbf{D}\mathbf{V}^\intercal+\lambda\mathbf{V}\mathbf{V}^\intercal\right)^{-1}\mathbf{V}\mathbf{D}^\intercal\mathbf{U}^\intercal\mathbf{y}\\
+	&=\mathbf{U}\mathbf{D}\mathbf{V}^\intercal\left(\mathbf{V}\left(\mathbf{D}\mathbf{D}+\lambda\mathbf{I}\right)\mathbf{V}^\intercal\right)^{-1}\mathbf{V}\mathbf{D}^\intercal\mathbf{U}^\intercal\mathbf{y}
+	=\mathbf{U}\mathbf{D}\left(\mathbf{D}^2+\lambda\mathbf{I}\right)^{-1}\mathbf{D}\mathbf{U}^\intercal\mathbf{y}\\
+	&=\sum_{i=1}^{p}\mathbf{u}_i\frac{d^2_i}{d^2_i+\lambda}\mathbf{u}_i^\intercal\mathbf{y}
 \end{align*}
+where $\mathbf{u}_i$ are the columns of $\mathbf{U}$ and $d_i^2$ are the squared singular values present in the diagonal matrix $\mathbf{D}^2$.
+Using the understanding gained from the principal components analysis derivations the interpretation is that ridge regression puts more emphasis on the directions of the principal components with large singular values or in other words, the directions containing more variance are seen as more important.
+
+This can be compared to principal components regression where directions with variance smaller than some threshold are completely ignored.
+The conclusion is then that depending on how the singular values decrease (sharp drop off after some point or gradual decrease) ridge regression and principal components regression can give very similar results.
+
+\subsubsection*{Partial Least Squares}
+A drawback with principal components analysis as a tool for dimensionality reduction is that the resulting principal directions are not necessarily ``useful''.
+Clearly we could use them to regularize out regression in some sense by cutting out some of the variance but if we have some response variable $\mathbf{y}$ it would make sense to also use that for the dimensionality reduction step.
+This is the problem partial least squares tries to solve.
+
+\begin{algorithm}
+	Let $\mathbf{x}_i$ be the $N$-dimensional vector representing all standardized observations of the $p$th input variable.
+	Then set $\mathbf{z}_1=\sum_{i=1}^{p}\inner{\mathbf{x}_i}{\mathbf{y}}\mathbf{x}_i$.
+	In other words, project $\mathbf{y}$ on $\mathbf{x}_i$ for all the variables and sum this, this is our new variable to regress on.
+	Now set $\boldsymbol{\theta}_1=\frac{\inner{\mathbf{z}_1}{\mathbf{y}}}{\inner{\mathbf{z}_1}{\mathbf{z}_1}}$, in other words calculate some regression.
+	The fitted variables are now $\mathbf{y}_1=\boldsymbol{\theta}_1\mathbf{z}_1$.
+	Now orthogonalize each input $\mathbf{x}_i$ with respect to $\mathbf{z}_1$ using the following operation:
+	\begin{equation*}
+		\mathbf{x}_i=\mathbf{x}_i-\frac{\inner{\mathbf{z}_1}{\mathbf{x}_i}}{\inner{\mathbf{z}_1}{\mathbf{z}_1}}\mathbf{z}_1
+	\end{equation*}
+	and repeat from the beginning, the only difference now is that we need to add the previous fitted variables to $\boldsymbol{\theta}_2\mathbf{z}_2$.
+	
+	This procedure can be repeated at most $p$ times, at which point our fitted values are equal to $\sum_{i=1}^{p}\boldsymbol{\theta}_i\mathbf{z}_i$ where the relationship between the coefficients $\boldsymbol{\theta}_i$ and input variables $\mathbf{z}_i$ is such that this is equal to ordinary least squares regression on the original input variables $\mathbf{x}_i$.
+	Since the new variables $\mathbf{z}_i$ are linear combinations of the original input variables we can recover a solution $\bfbeta^\mathrm{pls}$ for the original variables even if we leave out some of the last variables.
+\end{algorithm}
+
+In conclusion, partial least squares and principal components regression are both procedures where we reshape the input space using some linear combinations.
+Both of them are able to retain all the ``information'' or variance if we want to but usually they are cut of at some point.
+
+The difference is that while the $m$th principal component $\mathbf{v}_m$ can be shown to solve the optimization problem
+\begin{equation*}
+	\begin{aligned}
+	\operatornamewithlimits{max}_{\left\|\bfalpha\right\|=1} & & &\var\left(\mathbf{X}\bfalpha\right)\\
+	\text{such that} & & & \mathbf{v}_l^\intercal\mathbf{S}\bfalpha\text{ for }l=1,\dots,m-1,
+	\end{aligned}
+\end{equation*}
+the partial least squares directions can be shown to solve the optimization problem
+\begin{equation*}
+	\begin{aligned}
+	\operatornamewithlimits{max}_{\left\|\bfalpha\right\|=1} & & &\cor\left(\mathbf{y},\mathbf{X}\bfalpha\right)^2\var\left(\mathbf{X}\bfalpha\right)\\
+	\text{such that} & & & \mathbf{v}_l^\intercal\mathbf{S}\bfalpha\text{ for }l=1,\dots,m-1.
+\end{aligned}
+\end{equation*}
+In both cases the condition $\mathbf{v}_l^\intercal\mathbf{S}\bfalpha\text{ for }l=1,\dots,m-1$, where $\mathbf{S}$ is the sample covariance matrix, ensures that the solution is uncorrelated to the previous solutions.
+Apparently, the variance usually tends to dominate so the solutions from partial least squares are usually similar to the solutions of principal components regression, which is again somewhat similar to ridge regression.
+
+\section{Tree based methods}
+With tree based methods the idea is to partition the input space into smaller sections where a relatively simple model can be fit, for example just fitting the intercept of linear regression.
+In this way one can approximate more complex functions.
+The problem then is that we can easily start overfitting, if no two points occupy the same space one can always draw rectangles such that each rectangle is only occupied by one point but this would probably not lead to a particularly good solution.
+
+Thus the question is more one of how we should split the input space or rather when and where.
+\begin{algorithm}
+For a regression tree we use rectangles to partition the input space.
+In each rectangle we then choose one of the input variables to split along and a point to split at.
+This should be done so that the variance in the two new rectangles is minimized.
+\end{algorithm}
 
 
 \end{document}
