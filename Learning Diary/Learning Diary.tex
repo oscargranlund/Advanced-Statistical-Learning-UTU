@@ -13,6 +13,8 @@
 \usepackage{amssymb}
 \usepackage{amsfonts}
 \usepackage{amsthm}
+\usepackage{bbm}
+
 
 \usepackage{hyperref}
 
@@ -360,11 +362,69 @@ In this way one can approximate more complex functions.
 The problem then is that we can easily start overfitting, if no two points occupy the same space one can always draw rectangles such that each rectangle is only occupied by one point but this would probably not lead to a particularly good solution.
 
 Thus the question is more one of how we should split the input space or rather when and where.
+Usually we use rectangles with sides orthogonal to the input variables to split and decide on what and where to split using some loss function.
+Furthermore we always split each rectangle in each step if it is possible (a rectangle containing only one training sample can't be split).
+
+Usually the trees are grown large (by splitting many times) until some criterion is met, for example until the node size/rectangle size is at most 5, and then splits are removed using a procedure called cost-complexity pruning.
+The cost-complexity is usually a function that weighs the importance of prediction power and complexity of the tree using some hyperparameter that is usually chosen using cross-validation.
+
+The tree $\mathcal{T}$ is pruned to find the trees $\mathcal{T}_\alpha$ that minimizes the cost-complexity $C_\alpha\left(\mathcal{T}\right)$, from these optimal trees one is chosen using cross-validation or equivalently the hyperparameter $\alpha$ is chosen.
+In order to find the optimal $\mathcal{T}_\alpha$ we produce a sequence of trees using \emph{weakest-link pruning}; we remove one split at a time and we always remove the split that gives the smallest per node increase in the cost- or loss-part of the cost-complexity function.
+This is repeated until no splits are left and this sequence can be shown to always contain $\mathcal{T}_\alpha = \operatornamewithlimits{argmin}_\mathcal{T}C_\alpha(\mathcal{T})$.
+
+\subsubsection*{Regression trees}
 \begin{algorithm}
-For a regression tree we use rectangles to partition the input space.
-In each rectangle we then choose one of the input variables to split along and a point to split at.
-This should be done so that the variance in the two new rectangles is minimized.
+For regression trees we split each rectangle so that the resulting squared residuals in the two new rectangles is minimized.
+Mathematically this is expressed like this:
+	\begin{equation*}
+	\operatornamewithlimits{min}_{j,s}\left(\operatornamewithlimits{min}_{c_1}\sum_{\mathbf{x}_i\in \mathcal{R}_1\left(j,s\right)}\left(y_i-c_1\right)^2+\operatornamewithlimits{min}_{c_1}\sum_{\mathbf{x}_i\in \mathcal{R}_2\left(j,s\right)}\left(y_i-c_2\right)^2\right)
+	\end{equation*}
+	where $j$ is the splitting variable chosen among $1,\dots,p$ and $s$ is the splitting point.
+The resulting rectangles are denoted by $\mathcal{R}_1\left(j,s\right)$ and $\mathcal{R}_2\left(j,s\right)$ and the inner optimization problems can be solved by setting
+\begin{equation*}
+c_k := \sum_{\mathbf{x}_i\in \mathcal{R}_k\left(j,s\right)}\frac{y_i}{|\{\mathbf{x}_i\in \mathcal{R}_k\left(j,s\right)\}|}
+\end{equation*}
+where $|\{\mathbf{x}_i\in \mathcal{R}_k\left(j,s\right)\}|=:N_k$ is the number of points in a rectangle $\mathcal{R}_k$. 
+The cost or loss of a node $k$ or rectangle $\mathcal{R}_k$ in a given tree $\mathcal{T}$ is given by 
+\begin{equation*}
+	Q_k\left(\mathcal{T}\right):=\frac{1}{N_k}\sum_{\mathbf{x}_i\in \mathcal{R}_k}\left(y_i-c_k\right)^2
+\end{equation*}
+while the cost-complexity function is given by
+\begin{equation*}
+	C_\alpha\left(\mathcal{T}\right):=\sum_{k=1}^{|\mathcal{T}|}N_kQ_k\left(\mathcal{T}\right)+\alpha|\mathcal{T}|
+\end{equation*}
+where $\sum_{k=1}^{|\mathcal{T}|}N_kQ_k\left(\mathcal{T}\right)$ is the per-node complexity part of the weakest-link pruning procedure.
 \end{algorithm}
 
+\subsubsection*{Classification trees}
+
+\begin{algorithm}
+	For classification we need to change the costs $Q_k\left(\mathcal{T}\right)$ and the predictions $c_k$.
+	We set
+	\begin{equation*}
+		c_k:=\operatornamewithlimits{argmax}_j \sum_{\mathbf{x}_i\in \mathcal{R}_k}\mathbbm{1}_{\{\text{class of }\mathbf{x}_i\text{ equals }j \}}
+	\end{equation*}
+	and for the cost we have some choices, either we use the misclassification error rate
+	\begin{equation*}
+		Q_k\left(\mathcal{T}\right)=\frac{1}{N_k}\sum_{\mathbf{x}_i\in \mathcal{R}_k}\mathbbm{1}_{\{\text{class of }\mathbf{x}_i\text{ does not equal }c_k \}}=1-p_{kc_k},
+	\end{equation*}
+	where $p_{kc_k}$ is the proportion of class $c_k$ in node $k$, or we can use the Gini index
+	\begin{equation*}
+		Q_k\left(\mathcal{T}\right)=\sum_{j\neq j'}p_{kj}p_{kj'}=\sum_{j=1}^{J}p_{kj}\left(1-p_{kj}\right)
+	\end{equation*}
+	or the cross-entropy/deviance
+	\begin{equation*}
+		Q_k\left(\mathcal{T}\right)=-\sum_{j=1}^{J}p_{kj}\ln\left(p_{kj}\right).
+	\end{equation*}
+	The recommendation is to grow the tree using the Gini index or the cross-entropy while pruning should be done using the misclassification error rate.
+	Growing is done by solving the optimization problem
+	\begin{equation*}
+	\operatornamewithlimits{min}_{j,s} Q_{\mathcal{R}_1\left(j,s\right)}(\mathcal{T}) + Q_{\mathcal{R}_2\left(j,s\right)}(\mathcal{T})
+	\end{equation*}
+	and weakest-link pruning is the same as for the regression tree.
+\end{algorithm}
+The Gini index can be interpreted as some variance but we will not consider that now.
+
+\subsection{Bagging, Boostig and Random Forests}
 
 \end{document}
