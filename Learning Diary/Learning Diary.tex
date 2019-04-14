@@ -343,14 +343,14 @@ The difference is that while the $m$th principal component $\mathbf{v}_m$ can be
 \begin{equation*}
 	\begin{aligned}
 	\operatornamewithlimits{max}_{\left\|\bfalpha\right\|=1} & & &\var\left(\mathbf{X}\bfalpha\right)\\
-	\text{such that} & & & \mathbf{v}_l^\intercal\mathbf{S}\bfalpha\text{ for }l=1,\dots,m-1,
+	\text{subject to} & & & \mathbf{v}_l^\intercal\mathbf{S}\bfalpha\text{ for }l=1,\dots,m-1,
 	\end{aligned}
 \end{equation*}
 the partial least squares directions can be shown to solve the optimization problem
 \begin{equation*}
 	\begin{aligned}
 	\operatornamewithlimits{max}_{\left\|\bfalpha\right\|=1} & & &\cor\left(\mathbf{y},\mathbf{X}\bfalpha\right)^2\var\left(\mathbf{X}\bfalpha\right)\\
-	\text{such that} & & & \mathbf{v}_l^\intercal\mathbf{S}\bfalpha\text{ for }l=1,\dots,m-1.
+	\text{subject to} & & & \mathbf{v}_l^\intercal\mathbf{S}\bfalpha\text{ for }l=1,\dots,m-1.
 \end{aligned}
 \end{equation*}
 In both cases the condition $\mathbf{v}_l^\intercal\mathbf{S}\bfalpha\text{ for }l=1,\dots,m-1$, where $\mathbf{S}$ is the sample covariance matrix, ensures that the solution is uncorrelated to the previous solutions.
@@ -425,6 +425,202 @@ where $\sum_{k=1}^{|\mathcal{T}|}N_kQ_k\left(\mathcal{T}\right)$ is the per-node
 \end{algorithm}
 The Gini index can be interpreted as some variance but we will not consider that now.
 
-\subsection{Bagging, Boostig and Random Forests}
+A decision tree is a useful model for since they can be thought of as approximating human decision making.
+This means that they focus on the most important variables first, since they improve the predictions the most.
+This means that we can use a decision tree to get some measure of how important a variable is.
+
+\subsection{Bagging, Boosting and Random Forests}
+\subsubsection*{Bagging}
+Decision trees have high variance in the sense that if we split the data into two datasets we will most likely get different predictions.
+\emph{bootstrap aggregation} or \emph{bagging} is a way to reduce the variance of statistical learning methods.
+The idea is that the variance of the estimate of the mean $\bar{\mathbf{z}}$ decreases if we take multiple samples so by averaging many estimates we get a better estimate with less variance without overfitting.
+Of course this procedure can be used for many statistical learning methods but we will focus on trees.
+
+\begin{algorithm}
+	For decision trees we fit many relatively deep trees to different datasets that are sampled using the bootstrap.
+	The predictions will be the average of the outputs for regression problems and the majority vote of the outputs for classification problems.
+	Since the trees are deep they will have low bias but high variance but this is not a problem since we average over many estimates so the variance of the average of the outputs is decreased.
+	
+	This procedure also comes with the additional benefit of giving us an estimate for the test-set error using the \emph{out-of-bag errors}.
+	We can take an observation and leave out all the trees fit on that observation when predicting.
+	If the number of bags is sufficiently large, this will end up approximating the leave-one-out cross-validation error.
+\end{algorithm}
+
+Unfortunately since we get many trees we lose some interpretability.
+The largest con is that we can not get the same variable importance interpretation.
+Fortunately we can approximate the importance of a variable using the residual sum of squares measure or the Gini index.
+We get an estimate of variable importance by averaging (over all trees) the sum of the decreases in variance gained by splitting on a variable (in each tree).
+
+\subsubsection*{Boosting (AdaBoost)}
+Here the idea is to produce a sequence of weak classifiers and take the weighted majority vote of their outputs.
+Here a weak classifier means a classifier that only performs a bit better than random guessing.
+The sequence of classifiers is made so that they try to cover each others weaknesses, this is accomplished using weighted sampling.
+Like bagging this procedure can be applied to many different statistical learning methods to improve the results but we will focus on decision trees.
+
+\begin{algorithm}
+	We begin by fitting a shallow tree to a dataset sampled using an unweighted bootstrap, call the resulting decision tree $G_1(\bfx)$.
+	The second decision tree $G_2(\bfx)$ we fit to a dataset sampled using a weighted bootstrap.
+	The weights are chosen so that we give observations that are misclassified or have a large residual a higher weight while correctly classified observations get a lower weight.
+	This is continued for a number of steps and the estimator only gets stronger since each successive tree tries to focus on areas that previous trees find problematic.
+	The final output is either a weighted average or a weighted majority vote.
+	The weights can be determined using relative performance on the whole dataset.
+\end{algorithm}
+
+Since we again have many different trees we lose a bit of interpretability but we can still get the same estimate of variable importance as we get in the bagging case.
+
+\subsubsection*{Random Forest}
+As the name implies, the random forest algorithm is a model with many trees where we have incorporated some sense of randomness.
+The idea here is that we use the bagging approach but we don't always split on the optimal variable.
+
+\begin{algorithm}
+	Proceed as usually with the bagging method but always randomly select $m\leq p$ variables as candidates for splitting, typically we choose $m=\sqrt{p}$ or $m=1$ candidates for splitting.
+\end{algorithm}
+
+This decorrelates our data in some sense which is helpful since for correlated random variables we can't decrease the variance just by adding more bags.
+This can be seen by looking at the variance of the average of the identically distributed random variables $B$:
+\begin{equation*}
+	\var\left(\bar{B}\right)=\rho\sigma^2+\frac{1-\rho}{B}\sigma^2
+\end{equation*}
+where the first part is zero if the variables are uncorrelated but for correlated variables we can't go below $\rho\sigma^2$.
+Thus it is helpful to reduce the correlation between the estimators, that is, we force the trees to look different by restricting what they can split on.
+
+Again, we can get an estimate of the importance of a variable in the same way as with bagging.
+
+\section{Clustering}
+There are two principal ideas that govern how clustering algorithms work, either we choose hierarchical way to cluster where each cluster can be split into smaller clusters or merged into larger clusters in a hierarchical way, then we choose how many clusters to use or we can guess how many clusters to use and try to cluster the data into that many clusters in an unhierarchical way.
+Both methods are examples of unsupervised learning since we do no need any output variables to cluster, this is similar to principal components analysis.
+
+\subsubsection*{$K$-means}
+$K$-means clustering is a simple example of an unhierarchical algorithm, we have a predetermined number of clusters $K$ that we assign the observations to based on closeness.
+The clusters are represented by centroids and we determine the location of the centroids in the following way:
+\begin{algorithm}
+	First assign the observations randomly to clusters and calculate the centres of the clusters.
+	Now reassign all the observations to the closest centre and recalculate the centres, this is repeated until the centres don't change any more.
+	
+	We select the number of clusters $K$ by minimizing the within cluster variance.
+	This procedure gives a local optimum for
+	\begin{equation*}
+		\operatornamewithlimits{min}_{C_1,C_2,\dots,C_K}\sum_{k=1}^{K}\frac{1}{|C_k|}\sum_{i, i'\in C_k}\sum_{j=1}^{p}(x_{ij}-x_{i'j})^2.
+	\end{equation*}
+\end{algorithm}
+
+Since it is only a local optimum the initial assignment matters and we need to try many times.
+
+\subsection{Hierarchical clustering}
+We build trees of clusters either from the top or from the bottom.
+
+\subsubsection*{Bottom-up}
+\begin{algorithm}
+We start with all observations in their own cluster, at each step we merge the two clusters that are closest to each other.
+Closeness can be measured in many different ways, more about this later.
+\end{algorithm}
+
+\subsubsection*{Top-down}
+\begin{algorithm}
+We start with all observations in one cluster and split this cluster so that the greatest between group distance is achieved.
+Distance between clusters can again be measured in different ways
+\end{algorithm}
+
+\subsubsection*{Linkage}
+Linkage is what we call our way of measuring distances between things, so called dissimilarity measures.
+There are a couple of commonly used ones:
+\begin{itemize}
+	\item Single Linkage: The distance between two clusters is defined as the smallest euclidean distance between the two clusters.
+	\item Group Average: The distance between two clusters is defined as the distance between the cluster averages.
+	\item Complete Linkage: The distance between two clusters is defined as the largest euclidean distance between the two clusters.
+\end{itemize}
+All the linkages will usually perform differently, Complete Linkage will try to keep the clusters as compact as possible while Single Linkage can produce chains that can be long but thin, giving a less compact cluster.
+The Group Average is something of a compromise between the two.
+
+The number of clusters is usually selected using a drawing of the resulting tree where the vertical lengths represent the drops in dissimilarity of a split.
+Such a tree is called a dendrogram and, like with principal components analysis, usually there are natural points that seem logical to split at.
+
+\section{Support Vector Machines}
+\subsection{The Linear Classifier}
+The idea here is to slide a hyperplane between the classes but only maximizing the distance to the closest points.
+There are a couple of different levels of generalizations of this.
+\subsubsection*{Maximum Margin Hyperplane}
+\begin{algorithm}
+This simple version requires that there exists a hyperplane that can completely separate the two classes.
+The optimization problem that is solved is the following:
+\begin{equation*}
+	\begin{aligned}
+	\operatornamewithlimits{max}_{\bfbeta,\beta_0,\|\bfbeta\|=1} & & &C\\
+	\text{subject to} & & & y_i\left(\inner{\bfx_i}{\bfbeta}+\beta_0\right)\geq C\qquad\forall i
+	\end{aligned}
+\end{equation*}
+where the conditions ensure that all observations are correctly classified.
+\end{algorithm}
+
+This can be shown to create a solution that only depends on a few points/vectors that ``support'' the hyperplane.
+Here, support means that if we add thickness to the hyperplane evenly these points will all start touching the hyperplane at the same time, ergo they are the observations that are closest to the hyperplane.
+
+\subsubsection*{Soft Margin Hyperplane}
+Since the above problem is not always solvable and is sensitive to changes in the placement of the support vectors we need to modify it a bit.
+This can be done by allowing some points to be on the wrong side of the margin of the hyperplane.
+
+\begin{algorithm}
+We do this by changing the optimization problem:
+\begin{equation*}
+\begin{aligned}
+\operatornamewithlimits{max}_{\bfbeta,\beta_0,\|\bfbeta\|=1} & & &C\\
+\text{subject to} & & & y_i\left(\inner{\bfx_i}{\bfbeta}+\beta_0\right)\geq C(1-\varepsilon_i)\qquad \forall i\\
+& & & \sum_{i=1}^{N}\varepsilon_i\leq K\\
+& & & \varepsilon_i \geq 0 \qquad \forall i
+\end{aligned}
+\end{equation*}
+where $\varepsilon_i$ is an observation-specific parameter that allows it to be on the wrong side of the margin.
+If $\varepsilon_i>1$ the observation is misclassified, the maximum number of misclassification allowed is thus controlled by the hyperparameter $K$.
+\end{algorithm}
+
+This optimization problem can be reworked into the following optimization problem using the substitutions ($C=\frac{1}{\|\bfbeta\|}$):
+\begin{equation*}
+\begin{aligned}
+\operatornamewithlimits{min}_{\bfbeta,\beta_0} & & &\|\bfbeta\|^2\\
+\text{subject to} & & & y_i\left(\inner{\bfx_i}{\bfbeta}+\beta_0\right)\geq 1-\varepsilon_i\qquad\forall i\\
+& & & \sum_{i=1}^{N}\varepsilon_i\leq K\\
+& & & \varepsilon_i \geq 0\qquad\forall i
+\end{aligned}
+\end{equation*}
+which using Lagrange problem analysis can be shown to have the same solution as the optimization problem
+\begin{equation*}
+\begin{aligned}
+\operatornamewithlimits{min}_{\bfbeta,\beta_0} & & &\frac{1}{2}\|\bfbeta\|^2+\lambda\sum_{i=1}^{N}\varepsilon_i
+\\
+\text{subject to} & & & y_i\left(\inner{\bfx_i}{\bfbeta}+\beta_0\right)\geq 1-\varepsilon_i\qquad\forall i\\
+& & & \varepsilon_i \geq 0\qquad\forall i.
+\end{aligned}
+\end{equation*}
+
+\begin{algorithm}
+Now the Lagrange problem gives some conditions on the solution:
+\begin{align*}
+		\bfbeta&=\sum_{i=1}^{N}\alpha_iy_i\bfx_i,\\
+		0&=\sum_{1=1}^{N}\alpha_iy_i\\
+		\alpha_i&=\lambda-\mu_i\\
+\intertext{where $\alpha_i$ and $\mu_i$ are Lagrange multipliers.
+The Karush-Kuhn-Tucker conditions also apply:}
+	0&=\alpha_i\left(y_i\left(\inner{\bfx_i}{\bfbeta}+\beta_0\right)-1+\varepsilon_i\right)\\
+0&=\mu_i\varepsilon_i\\
+0&\leq y_i\left(\inner{\bfx_i}{\bfbeta}+\beta_0\right)-1+\varepsilon_i.
+\end{align*}
+The first of the Karush-Kuhn-Tucker conditions says that either $y_i\left(\inner{\bfx_i}{\bfbeta}+\beta_0\right)=1-\varepsilon_i$ or  $\alpha_i=0$.
+This means that the observation is one of the points in or on the margin if $\alpha_i\neq0$ and if $\alpha_i=0$ the observation does not affect the solution so we have retained the support vector property, we might just have a couple more support vectors.
+\end{algorithm}
+
+A drawback with the proposed method is that it is only capable of determining linear relationships if we don't augment the feature space ourselves prior to determining the solution.
+Fortunately there is a shortcut that we can use since everything in the solution is representable using inner products and there are functions called kernels with similar properties to the inner product (these functions are in fact also inner products but in another space).
+
+\subsubsection*{Kernels}
+In general, a kernel is any positive semidefinite function with two inputs.
+Using these functions instead of the regular inner product allows us to compute the inner product in some other space, for example a space where the basis is some nonlinear extension of our regular feature space.
+We can even compute the inner product in spaces that have an infinite basis, this corresponds to augmenting our original feature space with infinitely many new features which is impossible memory-wise and it is also impossible to calculate the normal inner product at that point.
+
+There are a couple of different ways to see the resulting solutions and to see kernels in general, some based on penalization/regularization interpretations and some on function fitting in Reproducing Kernel Hilbert Spaces (the spaces where the kernels are inner products).
+The same idea can also be applied to other algorithms in order to make the nonlinear, for example one can "nonlinearize" linear discriminant analysis by exchanging the inner products with kernels.
+
+\section*{Concluding remarks}
+This learning diary is based on short notes taken for the first final, in turn based on the book The Elements of Statistical Learning.
+The notes where supplemented with additional material from the book and other sources, for example Wikipedia.
 
 \end{document}
